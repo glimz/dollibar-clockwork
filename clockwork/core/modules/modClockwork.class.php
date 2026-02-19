@@ -106,7 +106,7 @@ class modClockwork extends DolibarrModules
 		// Employee clock page
 		$r++;
 		$this->menu[$r] = array(
-			'fk_menu' => 'fk_mainmenu=hrm,fk_leftmenu=',
+			'fk_menu' => 'fk_mainmenu=hrm',
 			'type' => 'left',
 			'titre' => 'ClockworkMyTime',
 			'mainmenu' => 'hrm',
@@ -173,4 +173,3 @@ class modClockwork extends DolibarrModules
 		return $this->_init($sql, $options);
 	}
 }
-
