@@ -197,13 +197,13 @@ print '</div>'; // clockwork-live
 
 print '<script>
 (function () {
-  const root = document.getElementById(\"clockwork-live\");
+  const root = document.getElementById("clockwork-live");
   if (!root) return;
 
-  const clockin = parseInt(root.dataset.clockin || \"0\", 10);
-  const breakstart = parseInt(root.dataset.breakstart || \"0\", 10);
-  const closedBreak = parseInt(root.dataset.closedBreak || \"0\", 10);
-  const serverNow = parseInt(root.dataset.serverNow || \"0\", 10);
+  const clockin = parseInt(root.dataset.clockin || "0", 10);
+  const breakstart = parseInt(root.dataset.breakstart || "0", 10);
+  const closedBreak = parseInt(root.dataset.closedBreak || "0", 10);
+  const serverNow = parseInt(root.dataset.serverNow || "0", 10);
 
   const clientNow = Math.floor(Date.now() / 1000);
   const offset = serverNow ? (serverNow - clientNow) : 0;
@@ -213,7 +213,7 @@ print '<script>
     const h = Math.floor(sec / 3600);
     const m = Math.floor((sec % 3600) / 60);
     const s = sec % 60;
-    return String(h).padStart(2, \"0\") + \":\" + String(m).padStart(2, \"0\") + \":\" + String(s).padStart(2, \"0\");
+    return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
   }
 
   function setText(id, v) {
@@ -228,18 +228,18 @@ print '<script>
     const openBreak = breakstart ? Math.max(0, now - breakstart) : 0;
     const breakTotal = Math.max(0, closedBreak + openBreak);
     const net = Math.max(0, worked - breakTotal);
-    setText(\"cw_worked\", fmt(worked));
-    setText(\"cw_break\", fmt(breakTotal));
-    setText(\"cw_net\", fmt(net));
-    setText(\"cw_timer\", fmt(net));
+    setText("cw_worked", fmt(worked));
+    setText("cw_break", fmt(breakTotal));
+    setText("cw_net", fmt(net));
+    setText("cw_timer", fmt(net));
   }
 
   // Keep note in the same POST form that contains the buttons.
-  const noteEl = document.getElementById(\"clockwork_note\");
-  const proxyEl = document.getElementById(\"clockwork_note_proxy\");
+  const noteEl = document.getElementById("clockwork_note");
+  const proxyEl = document.getElementById("clockwork_note_proxy");
   if (noteEl && proxyEl) {
-    const sync = () => { proxyEl.value = noteEl.value || \"\"; };
-    noteEl.addEventListener(\"input\", sync);
+    const sync = () => { proxyEl.value = noteEl.value || ""; };
+    noteEl.addEventListener("input", sync);
     sync();
   }
 
