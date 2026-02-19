@@ -45,15 +45,18 @@ class ActionsClockwork extends CommonHookActions
 	 */
 	public function printTopRightMenu($parameters, &$object, &$action, $hookmanager)
 	{
-		global $langs, $user;
+		global $form, $langs, $user;
 		$langs->load('clockwork@clockwork');
 
 		if (!isModEnabled('clockwork')) return 0;
 		if (!$user->hasRight('clockwork', 'clock')) return 0;
 
 		$url = DOL_URL_ROOT.'/custom/clockwork/clockwork/clock.php';
-		$title = dol_escape_htmltag($langs->trans('ClockworkMyTime'));
-		$this->resprints = '<div class="login"><a class="login-dropdown-a nofocusvisible" href="'.$url.'" title="'.$title.'"><i class="fa fa-clock"></i></a></div>';
+		$text = '<a href="'.$url.'" class="nofocusvisible">';
+		$text .= '<span class="fa fa-clock atoplogin valignmiddle"></span>';
+		$text .= '</a>';
+
+		$this->resprints = $form->textwithtooltip('', $langs->trans('ClockworkMyTime'), 2, 1, $text, 'login_block_elem', 2);
 		return 0;
 	}
 }
