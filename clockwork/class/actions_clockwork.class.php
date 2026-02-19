@@ -41,7 +41,7 @@ class ActionsClockwork extends CommonHookActions
 	}
 
 	/**
-	 * Add quick access link in the top right menu.
+	 * Add quick access icon in the top right menu.
 	 */
 	public function printTopRightMenu($parameters, &$object, &$action, $hookmanager)
 	{
@@ -52,8 +52,8 @@ class ActionsClockwork extends CommonHookActions
 		if (!$user->hasRight('clockwork', 'clock')) return 0;
 
 		$url = DOL_URL_ROOT.'/custom/clockwork/clockwork/clock.php';
-		$this->resprints = '<div class="login"><a class="butAction" href="'.$url.'">'.$langs->trans('Clockwork').'</a></div>';
+		$title = dol_escape_htmltag($langs->trans('ClockworkMyTime'));
+		$this->resprints = '<div class="login"><a class="login-dropdown-a nofocusvisible" href="'.$url.'" title="'.$title.'"><i class="fa fa-clock"></i></a></div>';
 		return 0;
 	}
 }
-
