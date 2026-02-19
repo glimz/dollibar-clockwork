@@ -48,7 +48,7 @@ class modClockwork extends DolibarrModules
 		);
 
 		$this->dirs = array('/clockwork/temp');
-		$this->config_page_url = array('setup.php@clockwork');
+		$this->config_page_url = array('setup.php@custom/clockwork');
 
 		$this->hidden = false;
 		$this->depends = array();
