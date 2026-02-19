@@ -1,0 +1,31 @@
+name: Release ZIP
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build release zip
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          ZIP="clockwork-${TAG}.zip"
+          # Ensure the zip contains top-level folder 'clockwork/' as Dolibarr expects under htdocs/custom/
+          zip -r "$ZIP" clockwork
+          sha256sum "$ZIP" > "$ZIP.sha256"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            clockwork-*.zip
+            clockwork-*.zip.sha256

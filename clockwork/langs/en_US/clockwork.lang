@@ -1,0 +1,51 @@
+# Dolibarr lang file for Clockwork module
+Clockwork=Clockwork
+ClockworkDesc=Clock-in/clock-out with breaks and reporting
+
+ClockworkSetup=Clockwork setup
+ClockworkMyTime=My time
+ClockworkHRShifts=Shifts (HR)
+ClockworkHRTotals=Totals (HR)
+
+ClockIn=Clock in
+ClockOut=Clock out
+StartBreak=Start break
+EndBreak=End break
+
+CurrentStatus=Current status
+ClockedInAt=Clocked in at
+NotClockedIn=Not clocked in
+OnBreak=On break
+NotOnBreak=Not on break
+
+Note=Note
+Employee=Employee
+ClockInTime=Clock-in time
+ClockOutTime=Clock-out time
+Breaks=Breaks
+Worked=Worked
+BreakTime=Break time
+Net=Net
+Status=Status
+Open=Open
+Closed=Closed
+
+ClockworkShifts=Clockwork shifts
+ClockworkTotals=Clockwork totals
+DateFrom=From
+DateTo=To
+Search=Search
+IncludeDailyBreakdown=Include daily breakdown
+
+ClockworkClockedIn=Clock-in recorded.
+ClockworkClockedOut=Clock-out recorded.
+ClockworkBreakStarted=Break started.
+ClockworkBreakEnded=Break ended.
+
+ClockworkAlreadyClockedIn=You are already clocked in.
+ClockworkNotClockedIn=You are not currently clocked in.
+ClockworkBreakAlreadyOpen=You are already on a break.
+ClockworkBreakNotOpen=No active break to end.
+
+ClockworkApiAllowCors=Allow CORS for Clockwork API
+
