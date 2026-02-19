@@ -1,7 +1,7 @@
 ## Clockwork (Dolibarr module) — v1 Milestone Checklist (with acceptance criteria)
 
 ### M0 — Repo + module identity
-- [ ] Create public repo `dolibarr-module-clockwork`
+- [x] Create public repo (current: `glimz/dollobar-clockwork`)
 - [x] Define module identifiers (folder/module name `clockwork`, rights class `clockwork`, unique module/rights IDs)
 - [x] Add install docs for “release zip → extract to `htdocs/custom/clockwork/` → enable in Dolibarr”
 
