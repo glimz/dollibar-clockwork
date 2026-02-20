@@ -60,14 +60,27 @@ function clockworkApiReply($status, $payload)
 /**
  * @return string
  */
-function clockworkApiGetBearerToken()
+function clockworkApiGetAuthToken()
 {
+	// Preferred: Authorization: Bearer <token>
 	$header = '';
 	if (!empty($_SERVER['HTTP_AUTHORIZATION'])) $header = $_SERVER['HTTP_AUTHORIZATION'];
 	if (!$header && !empty($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) $header = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
-	if (!$header) return '';
+	if ($header && preg_match('/^Bearer\\s+(.+)$/i', trim($header), $m)) {
+		return trim($m[1]);
+	}
 
-	if (preg_match('/^Bearer\\s+(.+)$/i', trim($header), $m)) return trim($m[1]);
+	// Fallback headers: proxies sometimes drop/strip Authorization.
+	// Use: X-API-Key: <token> (recommended fallback)
+	if (!empty($_SERVER['HTTP_X_API_KEY'])) return trim($_SERVER['HTTP_X_API_KEY']);
+	if (!empty($_SERVER['HTTP_X_CLOCKWORK_TOKEN'])) return trim($_SERVER['HTTP_X_CLOCKWORK_TOKEN']);
+
+	// Last resort (not recommended): token as query parameter, if explicitly enabled.
+	if (getDolGlobalInt('CLOCKWORK_API_ALLOW_QUERY_TOKEN', 0)) {
+		$q = GETPOST('api_key', 'alpha');
+		if (!empty($q)) return trim($q);
+	}
+
 	return '';
 }
 
@@ -95,9 +108,12 @@ function clockworkApiAuth()
 		exit;
 	}
 
-	$token = clockworkApiGetBearerToken();
+	$token = clockworkApiGetAuthToken();
 	if (empty($token)) {
-		clockworkApiReply(401, array('error' => 'Missing bearer token'));
+		clockworkApiReply(401, array(
+			'error' => 'Missing auth token',
+			'hint' => 'Send Authorization: Bearer <token> or X-API-Key: <token> (some proxies drop Authorization).',
+		));
 	}
 
 	$sql = "SELECT rowid FROM ".MAIN_DB_PREFIX."user";
