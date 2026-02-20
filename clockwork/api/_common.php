@@ -47,6 +47,9 @@ require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
 if (!function_exists('dolEncrypt') || !function_exists('dolDecrypt')) {
 	require_once DOL_DOCUMENT_ROOT.'/core/lib/security2.lib.php';
 }
+if (!function_exists('dol_stringtotime') || !function_exists('dol_print_date') || !function_exists('dol_now')) {
+	require_once DOL_DOCUMENT_ROOT.'/core/lib/date.lib.php';
+}
 
 /**
  * @param int $status
