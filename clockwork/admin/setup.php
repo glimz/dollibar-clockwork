@@ -32,6 +32,8 @@ $action = GETPOST('action', 'aZ09');
 if ($action === 'save') {
 	$allowCors = GETPOSTINT('CLOCKWORK_API_ALLOW_CORS');
 	dolibarr_set_const($db, 'CLOCKWORK_API_ALLOW_CORS', $allowCors, 'yesno', 0, '', $conf->entity);
+	$allowQueryToken = GETPOSTINT('CLOCKWORK_API_ALLOW_QUERY_TOKEN');
+	dolibarr_set_const($db, 'CLOCKWORK_API_ALLOW_QUERY_TOKEN', $allowQueryToken, 'yesno', 0, '', $conf->entity);
 	setEventMessages($langs->trans('SetupSaved'), null, 'mesgs');
 	header('Location: '.$_SERVER['PHP_SELF']);
 	exit;
@@ -53,11 +55,22 @@ print '<td>'.$langs->trans('ClockworkApiAllowCors').'</td>';
 print '<td>'.$form->selectyesno('CLOCKWORK_API_ALLOW_CORS', getDolGlobalInt('CLOCKWORK_API_ALLOW_CORS', 0), 1).'</td>';
 print '</tr>';
 
+print '<tr class="oddeven">';
+print '<td>Allow API token in query string (api_key)</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_API_ALLOW_QUERY_TOKEN', getDolGlobalInt('CLOCKWORK_API_ALLOW_QUERY_TOKEN', 0), 1);
+print '<br><span class="opacitymedium">Not recommended (tokens may end up in logs). Prefer Authorization: Bearer or X-API-Key.</span>';
+print '</td>';
+print '</tr>';
+
 print '</table>';
 
 print '<div class="center"><input class="button button-save" type="submit" value="'.$langs->trans('Save').'"></div>';
 print '</form>';
 
+print '<br>';
+print '<div class="center">';
+print '<a class="butAction" href="apitest.php">API diagnostics</a>';
+print '</div>';
+
 llxFooter();
 $db->close();
-

@@ -59,6 +59,7 @@ class modClockwork extends DolibarrModules
 		// Constants
 		$this->const = array();
 		$this->const[0] = array('CLOCKWORK_API_ALLOW_CORS', 'yesno', '0', 'Allow CORS for Clockwork API', 0);
+		$this->const[1] = array('CLOCKWORK_API_ALLOW_QUERY_TOKEN', 'yesno', '0', 'Allow api_key query param for Clockwork API (not recommended)', 0);
 
 		// Permissions
 		$this->rights = array();
