@@ -21,6 +21,7 @@ if (!$res) {
 
 require_once DOL_DOCUMENT_ROOT.'/core/lib/admin.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.form.class.php';
+require_once DOL_DOCUMENT_ROOT.'/custom/clockwork/lib/clockwork_webhook.lib.php';
 
 $langs->loadLangs(array('admin', 'clockwork@clockwork'));
 
@@ -34,7 +35,65 @@ if ($action === 'save') {
 	dolibarr_set_const($db, 'CLOCKWORK_API_ALLOW_CORS', $allowCors, 'yesno', 0, '', $conf->entity);
 	$allowQueryToken = GETPOSTINT('CLOCKWORK_API_ALLOW_QUERY_TOKEN');
 	dolibarr_set_const($db, 'CLOCKWORK_API_ALLOW_QUERY_TOKEN', $allowQueryToken, 'yesno', 0, '', $conf->entity);
+
+	$webhookDefault = (string) GETPOST('CLOCKWORK_WEBHOOK_DEFAULT', 'nohtml');
+	$webhookClockin = (string) GETPOST('CLOCKWORK_WEBHOOK_CLOCKIN', 'nohtml');
+	$webhookBreak = (string) GETPOST('CLOCKWORK_WEBHOOK_BREAK', 'nohtml');
+	$webhookMissed = (string) GETPOST('CLOCKWORK_WEBHOOK_MISSED_CLOCKIN', 'nohtml');
+	$webhookWeekly = (string) GETPOST('CLOCKWORK_WEBHOOK_WEEKLY_SUMMARY', 'nohtml');
+
+	dolibarr_set_const($db, 'CLOCKWORK_WEBHOOK_DEFAULT', $webhookDefault, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_WEBHOOK_CLOCKIN', $webhookClockin, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_WEBHOOK_BREAK', $webhookBreak, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_WEBHOOK_MISSED_CLOCKIN', $webhookMissed, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_WEBHOOK_WEEKLY_SUMMARY', $webhookWeekly, 'chaine', 0, '', $conf->entity);
+
+	dolibarr_set_const($db, 'CLOCKWORK_NOTIFY_CLOCKIN', GETPOSTINT('CLOCKWORK_NOTIFY_CLOCKIN'), 'yesno', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_NOTIFY_BREAK', GETPOSTINT('CLOCKWORK_NOTIFY_BREAK'), 'yesno', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_NOTIFY_MISSED_CLOCKIN', GETPOSTINT('CLOCKWORK_NOTIFY_MISSED_CLOCKIN'), 'yesno', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_NOTIFY_WEEKLY_SUMMARY', GETPOSTINT('CLOCKWORK_NOTIFY_WEEKLY_SUMMARY'), 'yesno', 0, '', $conf->entity);
+
+	$denylist = (string) GETPOST('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', 'nohtml');
+	dolibarr_set_const($db, 'CLOCKWORK_NOTIFY_DENYLIST_LOGINS', $denylist, 'chaine', 0, '', $conf->entity);
+
+	$missedTz = (string) GETPOST('CLOCKWORK_MISSED_CLOCKIN_TZ', 'nohtml');
+	$missedCutoff = (string) GETPOST('CLOCKWORK_MISSED_CLOCKIN_CUTOFF', 'nohtml');
+	$missedGrace = GETPOSTINT('CLOCKWORK_MISSED_CLOCKIN_GRACE_MINUTES');
+	$missedWeekdays = (string) GETPOST('CLOCKWORK_MISSED_CLOCKIN_WEEKDAYS', 'nohtml');
+	$respectLeave = GETPOSTINT('CLOCKWORK_MISSED_CLOCKIN_RESPECT_LEAVE');
+	$respectHolidays = GETPOSTINT('CLOCKWORK_MISSED_CLOCKIN_RESPECT_PUBLIC_HOLIDAYS');
+	$holidayCountryCode = (string) GETPOST('CLOCKWORK_PUBLIC_HOLIDAY_COUNTRY_CODE', 'nohtml');
+
+	dolibarr_set_const($db, 'CLOCKWORK_MISSED_CLOCKIN_TZ', $missedTz, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_MISSED_CLOCKIN_CUTOFF', $missedCutoff, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_MISSED_CLOCKIN_GRACE_MINUTES', $missedGrace, 'integer', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_MISSED_CLOCKIN_WEEKDAYS', $missedWeekdays, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_MISSED_CLOCKIN_RESPECT_LEAVE', $respectLeave, 'yesno', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_MISSED_CLOCKIN_RESPECT_PUBLIC_HOLIDAYS', $respectHolidays, 'yesno', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_PUBLIC_HOLIDAY_COUNTRY_CODE', $holidayCountryCode, 'chaine', 0, '', $conf->entity);
+
+	$weeklyTz = (string) GETPOST('CLOCKWORK_WEEKLY_SUMMARY_TZ', 'nohtml');
+	$weeklyDow = GETPOSTINT('CLOCKWORK_WEEKLY_SUMMARY_DOW');
+	$weeklyTime = (string) GETPOST('CLOCKWORK_WEEKLY_SUMMARY_TIME', 'nohtml');
+	dolibarr_set_const($db, 'CLOCKWORK_WEEKLY_SUMMARY_TZ', $weeklyTz, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_WEEKLY_SUMMARY_DOW', $weeklyDow, 'integer', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_WEEKLY_SUMMARY_TIME', $weeklyTime, 'chaine', 0, '', $conf->entity);
+
 	setEventMessages($langs->trans('SetupSaved'), null, 'mesgs');
+	header('Location: '.$_SERVER['PHP_SELF']);
+	exit;
+}
+
+if ($action === 'test_webhook') {
+	$type = (string) GETPOST('type', 'aZ09');
+	if (empty($type)) $type = CLOCKWORK_NOTIFY_TYPE_CLOCKIN;
+	$msg = '[Clockwork] Test notification ('.$type.') sent at '.dol_print_date(dol_now(), 'dayhour');
+	$res = clockworkSendDiscordWebhook($type, array('content' => $msg));
+	if (!empty($res['ok'])) {
+		setEventMessages('Webhook test sent.', null, 'mesgs');
+	} else {
+		setEventMessages('Webhook test failed: '.(!empty($res['error']) ? $res['error'] : 'unknown error'), null, 'errors');
+	}
 	header('Location: '.$_SERVER['PHP_SELF']);
 	exit;
 }
@@ -62,6 +121,115 @@ print '<br><span class="opacitymedium">Not recommended (tokens may end up in log
 print '</td>';
 print '</tr>';
 
+print '<tr class="liste_titre"><td>Discord webhook notifications</td><td></td></tr>';
+
+print '<tr class="oddeven">';
+print '<td>Enable clock-in alerts</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_NOTIFY_CLOCKIN', getDolGlobalInt('CLOCKWORK_NOTIFY_CLOCKIN', 1), 1).'</td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Enable break alerts</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_NOTIFY_BREAK', getDolGlobalInt('CLOCKWORK_NOTIFY_BREAK', 1), 1).'</td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Enable missed clock-in alerts</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_NOTIFY_MISSED_CLOCKIN', getDolGlobalInt('CLOCKWORK_NOTIFY_MISSED_CLOCKIN', 1), 1).'</td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Enable weekly summary</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_NOTIFY_WEEKLY_SUMMARY', getDolGlobalInt('CLOCKWORK_NOTIFY_WEEKLY_SUMMARY', 1), 1).'</td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Exclude logins (denylist)</td>';
+print '<td><input class="minwidth300" type="text" name="CLOCKWORK_NOTIFY_DENYLIST_LOGINS" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', 'admin,user.api')).'">';
+print '<br><span class="opacitymedium">Comma/space separated logins to exclude (e.g. admin, user.api).</span></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Default webhook URL</td>';
+print '<td><input class="minwidth300" type="text" name="CLOCKWORK_WEBHOOK_DEFAULT" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_WEBHOOK_DEFAULT')).'">';
+print '<br><span class="opacitymedium">If per-type webhook is empty, Clockwork falls back to this.</span></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Clock-in webhook URL (optional override)</td>';
+print '<td><input class="minwidth300" type="text" name="CLOCKWORK_WEBHOOK_CLOCKIN" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_WEBHOOK_CLOCKIN')).'"></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Break webhook URL (optional override)</td>';
+print '<td><input class="minwidth300" type="text" name="CLOCKWORK_WEBHOOK_BREAK" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_WEBHOOK_BREAK')).'"></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Missed clock-in webhook URL (optional override)</td>';
+print '<td><input class="minwidth300" type="text" name="CLOCKWORK_WEBHOOK_MISSED_CLOCKIN" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_WEBHOOK_MISSED_CLOCKIN')).'"></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Weekly summary webhook URL (optional override)</td>';
+print '<td><input class="minwidth300" type="text" name="CLOCKWORK_WEBHOOK_WEEKLY_SUMMARY" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_WEBHOOK_WEEKLY_SUMMARY')).'"></td>';
+print '</tr>';
+
+print '<tr class="liste_titre"><td>Missed clock-in policy</td><td></td></tr>';
+
+print '<tr class="oddeven">';
+print '<td>Timezone</td>';
+print '<td><input type="text" name="CLOCKWORK_MISSED_CLOCKIN_TZ" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_MISSED_CLOCKIN_TZ', 'Africa/Lagos')).'"></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Cutoff time (HH:MM)</td>';
+print '<td><input type="text" name="CLOCKWORK_MISSED_CLOCKIN_CUTOFF" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_MISSED_CLOCKIN_CUTOFF', '09:30')).'"></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Grace period (minutes)</td>';
+print '<td><input type="number" min="0" step="1" name="CLOCKWORK_MISSED_CLOCKIN_GRACE_MINUTES" value="'.((int) getDolGlobalInt('CLOCKWORK_MISSED_CLOCKIN_GRACE_MINUTES', 0)).'"></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Weekdays to check (1=Mon..7=Sun)</td>';
+print '<td><input type="text" class="minwidth300" name="CLOCKWORK_MISSED_CLOCKIN_WEEKDAYS" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_MISSED_CLOCKIN_WEEKDAYS', '1,2,3,4,5')).'"></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Skip if user is on approved leave</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_MISSED_CLOCKIN_RESPECT_LEAVE', getDolGlobalInt('CLOCKWORK_MISSED_CLOCKIN_RESPECT_LEAVE', 1), 1).'</td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Skip public holidays</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_MISSED_CLOCKIN_RESPECT_PUBLIC_HOLIDAYS', getDolGlobalInt('CLOCKWORK_MISSED_CLOCKIN_RESPECT_PUBLIC_HOLIDAYS', 1), 1).'</td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Public holiday country code override</td>';
+print '<td><input type="text" name="CLOCKWORK_PUBLIC_HOLIDAY_COUNTRY_CODE" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_PUBLIC_HOLIDAY_COUNTRY_CODE')).'">';
+print '<br><span class="opacitymedium">Leave empty to use company country (Setup → Company/Organization).</span></td>';
+print '</tr>';
+
+print '<tr class="liste_titre"><td>Weekly summary schedule</td><td></td></tr>';
+
+print '<tr class="oddeven">';
+print '<td>Timezone</td>';
+print '<td><input type="text" name="CLOCKWORK_WEEKLY_SUMMARY_TZ" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_WEEKLY_SUMMARY_TZ', 'Africa/Lagos')).'"></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Day of week (1=Mon..7=Sun)</td>';
+print '<td><input type="number" min="1" max="7" step="1" name="CLOCKWORK_WEEKLY_SUMMARY_DOW" value="'.((int) getDolGlobalInt('CLOCKWORK_WEEKLY_SUMMARY_DOW', 1)).'"></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Time (HH:MM)</td>';
+print '<td><input type="text" name="CLOCKWORK_WEEKLY_SUMMARY_TIME" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_WEEKLY_SUMMARY_TIME', '09:35')).'"></td>';
+print '</tr>';
+
 print '</table>';
 
 print '<div class="center"><input class="button button-save" type="submit" value="'.$langs->trans('Save').'"></div>';
@@ -70,6 +238,16 @@ print '</form>';
 print '<br>';
 print '<div class="center">';
 print '<a class="butAction" href="apitest.php">API diagnostics</a>';
+print '</div>';
+
+print '<br>';
+print '<div class="center">';
+print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'" style="display:inline-block; margin:0;">';
+print '<input type="hidden" name="token" value="'.newToken().'">';
+print '<input type="hidden" name="action" value="test_webhook">';
+print '<input type="hidden" name="type" value="'.CLOCKWORK_NOTIFY_TYPE_CLOCKIN.'">';
+print '<input class="butAction" type="submit" value="Send test webhook">';
+print '</form>';
 print '</div>';
 
 llxFooter();
