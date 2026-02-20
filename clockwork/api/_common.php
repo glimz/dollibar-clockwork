@@ -44,6 +44,9 @@ if (!$res) {
 }
 
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
+if (!function_exists('dolEncrypt') || !function_exists('dolDecrypt')) {
+	require_once DOL_DOCUMENT_ROOT.'/core/lib/security2.lib.php';
+}
 
 /**
  * @param int $status
@@ -116,9 +119,12 @@ function clockworkApiAuth()
 		));
 	}
 
+	// Dolibarr stores api_key encrypted in DB.
+	$tokenEncrypted = dolEncrypt($token, '', '', 'dolibarr');
+
 	$sql = "SELECT rowid FROM ".MAIN_DB_PREFIX."user";
 	$sql .= " WHERE entity IN (0,".((int) $conf->entity).")";
-	$sql .= " AND api_key = '".$db->escape($token)."'";
+	$sql .= " AND api_key = '".$db->escape($tokenEncrypted)."'";
 	$sql .= " AND statut = 1";
 	$sql .= " LIMIT 1";
 

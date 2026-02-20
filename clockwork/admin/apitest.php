@@ -20,6 +20,9 @@ if (!$res) {
 }
 
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.form.class.php';
+if (!function_exists('dolEncrypt') || !function_exists('dolDecrypt')) {
+	require_once DOL_DOCUMENT_ROOT.'/core/lib/security2.lib.php';
+}
 
 $langs->loadLangs(array('admin', 'users', 'clockwork@clockwork'));
 
@@ -47,9 +50,10 @@ if ($action === 'test') {
 	if ($token === '') {
 		$resultError = 'Token is empty.';
 	} else {
+		$tokenEncrypted = dolEncrypt($token, '', '', 'dolibarr');
 		$sql = "SELECT rowid, login, entity, statut, api_key FROM ".MAIN_DB_PREFIX."user";
 		$sql .= " WHERE entity IN (0,".((int) $conf->entity).")";
-		$sql .= " AND api_key = '".$db->escape($token)."'";
+		$sql .= " AND api_key = '".$db->escape($tokenEncrypted)."'";
 		$sql .= " LIMIT 1";
 		$resql = $db->query($sql);
 		if (!$resql) {
@@ -112,7 +116,7 @@ print '<table class="liste centpercent">';
 print '<tr class="liste_titre"><th>Login</th><th class="center">Entity</th><th class="center">Enabled</th><th class="center">Key length</th><th>Key sha256 prefix</th></tr>';
 if ($resList) {
 	while ($u = $db->fetch_object($resList)) {
-		$key = (string) $u->api_key;
+		$key = (string) dolDecrypt($u->api_key);
 		print '<tr class="oddeven">';
 		print '<td>'.dol_escape_htmltag($u->login).'</td>';
 		print '<td class="center">'.((int) $u->entity).'</td>';
