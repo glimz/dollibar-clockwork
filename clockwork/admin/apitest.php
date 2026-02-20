@@ -40,7 +40,7 @@ $tokenLen = 0;
 $tokenHash = '';
 
 if ($action === 'test') {
-	$token = trim((string) GETPOST('token', 'none'));
+	$token = trim((string) GETPOST('api_token', 'none'));
 	$tokenLen = strlen($token);
 	$tokenHash = cw_hash_prefix($token);
 
@@ -78,7 +78,7 @@ print '<input type="hidden" name="token" value="'.newToken().'">';
 print '<input type="hidden" name="action" value="test">';
 print '<table class="noborder centpercent">';
 print '<tr class="liste_titre"><td colspan="2">Test a token against llx_user.api_key (entity 0 or current entity)</td></tr>';
-print '<tr class="oddeven"><td class="titlefield">Token</td><td><input class="quatrevingtpercent" type="password" name="token" value=""></td></tr>';
+print '<tr class="oddeven"><td class="titlefield">API key</td><td><input class="quatrevingtpercent" type="password" name="api_token" value=""></td></tr>';
 print '</table>';
 print '<div class="center"><input class="button button-save" type="submit" value="Test token"></div>';
 print '</form>';
@@ -127,4 +127,3 @@ print '</div>';
 
 llxFooter();
 $db->close();
-
