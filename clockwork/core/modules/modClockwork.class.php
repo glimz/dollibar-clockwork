@@ -47,7 +47,9 @@ class modClockwork extends DolibarrModules
 			'triggers' => 1,
 		);
 
-		$this->dirs = array('/clockwork/temp');
+		// Note: Some installs set $dolibarr_main_data_root to htdocs/custom (not recommended).
+		// To avoid mixing writable temp files with the module code directory, we use a separate data folder name.
+		$this->dirs = array('/clockwork_data/temp');
 		$this->config_page_url = array('setup.php@custom/clockwork');
 
 		$this->hidden = false;
