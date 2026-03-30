@@ -298,5 +298,198 @@ class ClockworkCron
 		dolibarr_set_const($this->db, 'CLOCKWORK_WEEKLY_SUMMARY_LAST_SENT_ISOWEEK', $isoWeek, 'chaine', 0, '', $conf->entity);
 		return 0;
 	}
+
+	/**
+	 * Send overwork alerts for users working continuously without breaks.
+	 *
+	 * @return int 0 if OK, <0 if error
+	 */
+	public function notifyOverwork()
+	{
+		global $conf;
+
+		if (!clockworkIsNotificationEnabled(CLOCKWORK_NOTIFY_TYPE_OVERWORK)) {
+			return 0;
+		}
+		$webhook = clockworkGetWebhookUrl(CLOCKWORK_NOTIFY_TYPE_OVERWORK);
+		if (empty($webhook)) {
+			return 0;
+		}
+
+		$thresholdHours = (int) getDolGlobalInt('CLOCKWORK_OVERWORK_THRESHOLD_HOURS', 4);
+		$thresholdSeconds = $thresholdHours * 3600;
+
+		$now = dol_now();
+		$denylist = getDolGlobalString('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', '');
+
+		// Get all open shifts
+		$sql = 'SELECT s.rowid, s.fk_user, s.clockin, s.ip, u.login, u.firstname, u.lastname';
+		$sql .= ' FROM ' . MAIN_DB_PREFIX . 'clockwork_shift as s';
+		$sql .= ' JOIN ' . MAIN_DB_PREFIX . 'user as u ON u.rowid = s.fk_user';
+		$sql .= ' WHERE s.entity = ' . ((int) $conf->entity);
+		$sql .= ' AND s.status = 0';
+
+		$resql = $this->db->query($sql);
+		if (!$resql) {
+			$this->error = $this->db->lasterror();
+			return -1;
+		}
+
+		while ($obj = $this->db->fetch_object($resql)) {
+			$login = (string) $obj->login;
+			if ($login !== '' && clockworkIsLoginExcluded($login, $denylist)) {
+				continue;
+			}
+
+			$shiftId = (int) $obj->rowid;
+			$clockinTs = $this->db->jdate($obj->clockin);
+
+			// Get the last break end time for this shift
+			$sqlBreak = 'SELECT MAX(break_end) as last_break_end';
+			$sqlBreak .= ' FROM ' . MAIN_DB_PREFIX . 'clockwork_break';
+			$sqlBreak .= ' WHERE fk_shift = ' . $shiftId;
+			$sqlBreak .= ' AND break_end IS NOT NULL';
+
+			$resqlBreak = $this->db->query($sqlBreak);
+			$lastBreakEnd = $clockinTs; // Default to clock-in time
+			if ($resqlBreak) {
+				$objBreak = $this->db->fetch_object($resqlBreak);
+				if ($objBreak && $objBreak->last_break_end) {
+					$lastBreakEnd = $this->db->jdate($objBreak->last_break_end);
+				}
+			}
+
+			// Check if there's an open break
+			$sqlOpenBreak = 'SELECT COUNT(*) as c';
+			$sqlOpenBreak .= ' FROM ' . MAIN_DB_PREFIX . 'clockwork_break';
+			$sqlOpenBreak .= ' WHERE fk_shift = ' . $shiftId;
+			$sqlOpenBreak .= ' AND break_end IS NULL';
+
+			$resqlOpenBreak = $this->db->query($sqlOpenBreak);
+			if ($resqlOpenBreak) {
+				$objOpenBreak = $this->db->fetch_object($resqlOpenBreak);
+				if ($objOpenBreak && (int) $objOpenBreak->c > 0) {
+					continue; // User is on break, skip
+				}
+			}
+
+			// Calculate continuous work time
+			$continuousSeconds = max(0, $now - $lastBreakEnd);
+
+			if ($continuousSeconds >= $thresholdSeconds) {
+				// Check if we already sent an alert for this shift recently (avoid spam)
+				$alertKey = 'CLOCKWORK_OVERWORK_ALERT_' . $shiftId;
+				$lastAlert = getDolGlobalString($alertKey, '');
+				if ($lastAlert !== '') {
+					$lastAlertTs = dol_stringtotime($lastAlert);
+					// Don't alert again within 1 hour
+					if ($lastAlertTs > 0 && ($now - $lastAlertTs) < 3600) {
+						continue;
+					}
+				}
+
+				$name = trim($obj->firstname . ' ' . $obj->lastname);
+				$label = $login;
+				if ($name !== '') $label .= ' (' . $name . ')';
+
+				// Send rich embed notification
+				require_once DOL_DOCUMENT_ROOT . '/custom/clockwork/lib/clockwork_webhook.lib.php';
+				clockworkNotifyOverwork($login, $shiftId, $continuousSeconds, $obj->ip);
+
+				// Mark alert sent
+				dolibarr_set_const($this->db, $alertKey, dol_print_date($now, 'dayhourlog'), 'chaine', 0, '', $conf->entity);
+			}
+		}
+
+		return 0;
+	}
+
+	/**
+	 * Send logout reminders for users who haven't clocked out.
+	 *
+	 * @return int 0 if OK, <0 if error
+	 */
+	public function notifyForgotLogout()
+	{
+		global $conf;
+
+		if (!clockworkIsNotificationEnabled(CLOCKWORK_NOTIFY_TYPE_LOGOUT_REMINDER)) {
+			return 0;
+		}
+		$webhook = clockworkGetWebhookUrl(CLOCKWORK_NOTIFY_TYPE_LOGOUT_REMINDER);
+		if (empty($webhook)) {
+			return 0;
+		}
+
+		$tzName = getDolGlobalString('CLOCKWORK_LOGOUT_REMINDER_TZ', 'Africa/Lagos');
+		try {
+			$tz = new DateTimeZone($tzName);
+		} catch (Exception $e) {
+			dol_syslog('Clockwork notifyForgotLogout: invalid timezone ' . $tzName, LOG_ERR);
+			return 0;
+		}
+
+		$nowLocal = new DateTimeImmutable('now', $tz);
+
+		$cutoff = getDolGlobalString('CLOCKWORK_LOGOUT_REMINDER_CUTOFF', '23:00');
+		if (!preg_match('/^(\d{1,2}):(\d{2})$/', $cutoff, $m)) {
+			dol_syslog('Clockwork notifyForgotLogout: invalid cutoff ' . $cutoff, LOG_ERR);
+			return 0;
+		}
+		$cutoffHour = (int) $m[1];
+		$cutoffMin = (int) $m[2];
+
+		$cutoffLocal = $nowLocal->setTime($cutoffHour, $cutoffMin, 0);
+		if ($nowLocal < $cutoffLocal) {
+			return 0; // Not yet past cutoff
+		}
+
+		$localDateKey = $nowLocal->format('Ymd');
+		if (getDolGlobalString('CLOCKWORK_LOGOUT_REMINDER_LAST_SENT_DATE', '') === $localDateKey) {
+			return 0; // Already sent today
+		}
+
+		$denylist = getDolGlobalString('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', '');
+
+		// Get all open shifts
+		$sql = 'SELECT s.rowid, s.fk_user, s.clockin, u.login, u.firstname, u.lastname';
+		$sql .= ' FROM ' . MAIN_DB_PREFIX . 'clockwork_shift as s';
+		$sql .= ' JOIN ' . MAIN_DB_PREFIX . 'user as u ON u.rowid = s.fk_user';
+		$sql .= ' WHERE s.entity = ' . ((int) $conf->entity);
+		$sql .= ' AND s.status = 0';
+
+		$resql = $this->db->query($sql);
+		if (!$resql) {
+			$this->error = $this->db->lasterror();
+			return -1;
+		}
+
+		$reminders = array();
+		while ($obj = $this->db->fetch_object($resql)) {
+			$login = (string) $obj->login;
+			if ($login !== '' && clockworkIsLoginExcluded($login, $denylist)) {
+				continue;
+			}
+
+			$shiftId = (int) $obj->rowid;
+			$clockinTs = $this->db->jdate($obj->clockin);
+
+			$name = trim($obj->firstname . ' ' . $obj->lastname);
+			$label = $login;
+			if ($name !== '') $label .= ' (' . $name . ')';
+
+			// Send rich embed notification
+			require_once DOL_DOCUMENT_ROOT . '/custom/clockwork/lib/clockwork_webhook.lib.php';
+			clockworkNotifyLogoutReminder($login, $shiftId, $clockinTs);
+
+			$reminders[] = $label;
+		}
+
+		if (!empty($reminders)) {
+			dolibarr_set_const($this->db, 'CLOCKWORK_LOGOUT_REMINDER_LAST_SENT_DATE', $localDateKey, 'chaine', 0, '', $conf->entity);
+		}
+
+		return 0;
+	}
 }
 

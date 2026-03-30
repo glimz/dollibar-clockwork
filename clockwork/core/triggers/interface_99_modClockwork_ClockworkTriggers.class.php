@@ -60,37 +60,34 @@ class InterfaceClockworkTriggers
 		$when = dol_print_date(dol_now(), 'dayhour');
 
 		if ($action === 'CLOCKWORK_CLOCKIN') {
-			$clockin = '';
-			if (is_object($object) && !empty($object->clockin)) {
-				$clockin = dol_print_date((int) $object->clockin, 'dayhour');
-			}
-			$msg = '[Clockwork] '.$login.' clocked in'.($clockin ? ' at '.$clockin : '').' (shift #'.$objectId.')';
-			$res = clockworkNotify(CLOCKWORK_NOTIFY_TYPE_CLOCKIN, $msg);
+			$clockinTs = (is_object($object) && !empty($object->clockin)) ? (int) $object->clockin : dol_now();
+			$ip = (is_object($object) && !empty($object->ip)) ? $object->ip : '';
+			$res = clockworkNotifyClockin($login, $objectId, $clockinTs, $ip);
 			if (empty($res['ok'])) dol_syslog('Clockwork notify clockin failed: '.json_encode($res), LOG_ERR);
 			return 0;
 		}
 
+		if ($action === 'CLOCKWORK_CLOCKOUT') {
+			$clockoutTs = dol_now();
+			$netSeconds = (is_object($object) && isset($object->net_seconds)) ? (int) $object->net_seconds : 0;
+			$res = clockworkNotifyClockout($login, $objectId, $clockoutTs, $netSeconds);
+			if (empty($res['ok'])) dol_syslog('Clockwork notify clockout failed: '.json_encode($res), LOG_ERR);
+			return 0;
+		}
+
 		if ($action === 'CLOCKWORK_BREAK_START') {
-			$start = '';
 			$shiftId = (is_object($object) && isset($object->fk_shift)) ? (int) $object->fk_shift : 0;
-			if (is_object($object) && !empty($object->break_start)) {
-				$start = dol_print_date((int) $object->break_start, 'dayhour');
-			}
-			$msg = '[Clockwork] '.$login.' started a break'.($start ? ' at '.$start : '').($shiftId ? ' (shift #'.$shiftId.')' : '');
-			$res = clockworkNotify(CLOCKWORK_NOTIFY_TYPE_BREAK, $msg);
+			$breakStartTs = (is_object($object) && !empty($object->break_start)) ? (int) $object->break_start : dol_now();
+			$res = clockworkNotifyBreakStart($login, $shiftId, $breakStartTs);
 			if (empty($res['ok'])) dol_syslog('Clockwork notify break start failed: '.json_encode($res), LOG_ERR);
 			return 0;
 		}
 
 		if ($action === 'CLOCKWORK_BREAK_END') {
-			$end = '';
 			$shiftId = (is_object($object) && isset($object->fk_shift)) ? (int) $object->fk_shift : 0;
-			$seconds = (is_object($object) && isset($object->seconds)) ? (int) $object->seconds : 0;
-			if (is_object($object) && !empty($object->break_end)) {
-				$end = dol_print_date((int) $object->break_end, 'dayhour');
-			}
-			$msg = '[Clockwork] '.$login.' ended a break'.($end ? ' at '.$end : '').($seconds ? ' ('.clockworkFormatDuration($seconds).')' : '').($shiftId ? ' (shift #'.$shiftId.')' : '');
-			$res = clockworkNotify(CLOCKWORK_NOTIFY_TYPE_BREAK, $msg);
+			$breakEndTs = (is_object($object) && !empty($object->break_end)) ? (int) $object->break_end : dol_now();
+			$breakSeconds = (is_object($object) && isset($object->seconds)) ? (int) $object->seconds : 0;
+			$res = clockworkNotifyBreakEnd($login, $shiftId, $breakEndTs, $breakSeconds);
 			if (empty($res['ok'])) dol_syslog('Clockwork notify break end failed: '.json_encode($res), LOG_ERR);
 			return 0;
 		}

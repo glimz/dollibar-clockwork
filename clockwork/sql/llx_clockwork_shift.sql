@@ -18,6 +18,7 @@ CREATE TABLE llx_clockwork_shift (
   note text,
   ip varchar(64) DEFAULT NULL,
   user_agent varchar(255) DEFAULT NULL,
+  ip_flagged smallint NOT NULL DEFAULT 0, -- 0=normal, 1=ip changed during shift
 
   datec datetime NOT NULL,
   tms timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

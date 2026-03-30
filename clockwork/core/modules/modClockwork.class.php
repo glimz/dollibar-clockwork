@@ -84,6 +84,18 @@ class modClockwork extends DolibarrModules
 		$this->const[21] = array('CLOCKWORK_WEEKLY_SUMMARY_TIME', 'chaine', '09:35', 'Local time (HH:MM) to send weekly summary', 0);
 		$this->const[22] = array('CLOCKWORK_MISSED_CLOCKIN_LAST_SENT_DATE', 'chaine', '', 'Internal: last local date (YYYYMMDD) we sent missed clock-in alert', 0);
 		$this->const[23] = array('CLOCKWORK_WEEKLY_SUMMARY_LAST_SENT_ISOWEEK', 'chaine', '', 'Internal: last ISO week (YYYY-Www) we sent weekly summary', 0);
+		$this->const[24] = array('CLOCKWORK_ALLOWED_IPS', 'chaine', '', 'Allowed IP ranges (CIDR notation, comma separated, e.g. 10.0.0.0/8,192.168.1.0/24)', 0);
+		$this->const[25] = array('CLOCKWORK_MONITOR_NETWORK_CHANGES', 'yesno', '1', 'Monitor and alert on network changes during shifts', 0);
+		$this->const[26] = array('CLOCKWORK_WEBHOOK_OVERWORK', 'chaine', '', 'Discord webhook for overwork alerts (optional override)', 0);
+		$this->const[27] = array('CLOCKWORK_WEBHOOK_LOGOUT_REMINDER', 'chaine', '', 'Discord webhook for logout reminders (optional override)', 0);
+		$this->const[28] = array('CLOCKWORK_WEBHOOK_NETWORK_CHANGE', 'chaine', '', 'Discord webhook for network change alerts (optional override)', 0);
+		$this->const[29] = array('CLOCKWORK_NOTIFY_OVERWORK', 'yesno', '1', 'Enable overwork alerts', 0);
+		$this->const[30] = array('CLOCKWORK_NOTIFY_LOGOUT_REMINDER', 'yesno', '1', 'Enable logout reminders', 0);
+		$this->const[31] = array('CLOCKWORK_NOTIFY_NETWORK_CHANGE', 'yesno', '1', 'Enable network change alerts', 0);
+		$this->const[32] = array('CLOCKWORK_OVERWORK_THRESHOLD_HOURS', 'integer', '4', 'Hours of continuous work before overwork alert', 0);
+		$this->const[33] = array('CLOCKWORK_LOGOUT_REMINDER_CUTOFF', 'chaine', '23:00', 'Time (HH:MM) to send logout reminders for open shifts', 0);
+		$this->const[34] = array('CLOCKWORK_LOGOUT_REMINDER_TZ', 'chaine', 'Africa/Lagos', 'Timezone for logout reminder checks', 0);
+		$this->const[35] = array('CLOCKWORK_LOGOUT_REMINDER_LAST_SENT_DATE', 'chaine', '', 'Internal: last local date (YYYYMMDD) we sent logout reminders', 0);
 
 		// Cronjobs
 		$datestart = dol_now() + 120;
@@ -114,6 +126,36 @@ class modClockwork extends DolibarrModules
 				'frequency' => 1,
 				'unitfrequency' => 3600,
 				'priority' => 60,
+				'status' => 1,
+				'test' => '$conf->clockwork->enabled',
+				'datestart' => $datestart
+			),
+			2 => array(
+				'label' => 'ClockworkNotifyOverwork:clockwork',
+				'jobtype' => 'method',
+				'class' => 'custom/clockwork/class/clockworkcron.class.php',
+				'objectname' => 'ClockworkCron',
+				'method' => 'notifyOverwork',
+				'parameters' => '',
+				'comment' => 'Alert when users work continuously without breaks',
+				'frequency' => 1,
+				'unitfrequency' => 300,
+				'priority' => 55,
+				'status' => 1,
+				'test' => '$conf->clockwork->enabled',
+				'datestart' => $datestart
+			),
+			3 => array(
+				'label' => 'ClockworkNotifyLogoutReminder:clockwork',
+				'jobtype' => 'method',
+				'class' => 'custom/clockwork/class/clockworkcron.class.php',
+				'objectname' => 'ClockworkCron',
+				'method' => 'notifyForgotLogout',
+				'parameters' => '',
+				'comment' => 'Remind users to clock out at end of day',
+				'frequency' => 1,
+				'unitfrequency' => 300,
+				'priority' => 55,
 				'status' => 1,
 				'test' => '$conf->clockwork->enabled',
 				'datestart' => $datestart

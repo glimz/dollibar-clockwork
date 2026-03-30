@@ -79,6 +79,35 @@ if ($action === 'save') {
 	dolibarr_set_const($db, 'CLOCKWORK_WEEKLY_SUMMARY_DOW', $weeklyDow, 'integer', 0, '', $conf->entity);
 	dolibarr_set_const($db, 'CLOCKWORK_WEEKLY_SUMMARY_TIME', $weeklyTime, 'chaine', 0, '', $conf->entity);
 
+	// IP restriction settings
+	$allowedIPs = (string) GETPOST('CLOCKWORK_ALLOWED_IPS', 'nohtml');
+	dolibarr_set_const($db, 'CLOCKWORK_ALLOWED_IPS', $allowedIPs, 'chaine', 0, '', $conf->entity);
+
+	// Network change monitoring
+	$monitorNetwork = GETPOSTINT('CLOCKWORK_MONITOR_NETWORK_CHANGES');
+	dolibarr_set_const($db, 'CLOCKWORK_MONITOR_NETWORK_CHANGES', $monitorNetwork, 'yesno', 0, '', $conf->entity);
+
+	// Overwork settings
+	$webhookOverwork = (string) GETPOST('CLOCKWORK_WEBHOOK_OVERWORK', 'nohtml');
+	dolibarr_set_const($db, 'CLOCKWORK_WEBHOOK_OVERWORK', $webhookOverwork, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_NOTIFY_OVERWORK', GETPOSTINT('CLOCKWORK_NOTIFY_OVERWORK'), 'yesno', 0, '', $conf->entity);
+	$overworkThreshold = GETPOSTINT('CLOCKWORK_OVERWORK_THRESHOLD_HOURS');
+	dolibarr_set_const($db, 'CLOCKWORK_OVERWORK_THRESHOLD_HOURS', $overworkThreshold, 'integer', 0, '', $conf->entity);
+
+	// Logout reminder settings
+	$webhookLogout = (string) GETPOST('CLOCKWORK_WEBHOOK_LOGOUT_REMINDER', 'nohtml');
+	dolibarr_set_const($db, 'CLOCKWORK_WEBHOOK_LOGOUT_REMINDER', $webhookLogout, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_NOTIFY_LOGOUT_REMINDER', GETPOSTINT('CLOCKWORK_NOTIFY_LOGOUT_REMINDER'), 'yesno', 0, '', $conf->entity);
+	$logoutCutoff = (string) GETPOST('CLOCKWORK_LOGOUT_REMINDER_CUTOFF', 'nohtml');
+	dolibarr_set_const($db, 'CLOCKWORK_LOGOUT_REMINDER_CUTOFF', $logoutCutoff, 'chaine', 0, '', $conf->entity);
+	$logoutTz = (string) GETPOST('CLOCKWORK_LOGOUT_REMINDER_TZ', 'nohtml');
+	dolibarr_set_const($db, 'CLOCKWORK_LOGOUT_REMINDER_TZ', $logoutTz, 'chaine', 0, '', $conf->entity);
+
+	// Network change settings
+	$webhookNetwork = (string) GETPOST('CLOCKWORK_WEBHOOK_NETWORK_CHANGE', 'nohtml');
+	dolibarr_set_const($db, 'CLOCKWORK_WEBHOOK_NETWORK_CHANGE', $webhookNetwork, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_NOTIFY_NETWORK_CHANGE', GETPOSTINT('CLOCKWORK_NOTIFY_NETWORK_CHANGE'), 'yesno', 0, '', $conf->entity);
+
 	setEventMessages($langs->trans('SetupSaved'), null, 'mesgs');
 	header('Location: '.$_SERVER['PHP_SELF']);
 	exit;
@@ -228,6 +257,73 @@ print '</tr>';
 print '<tr class="oddeven">';
 print '<td>Time (HH:MM)</td>';
 print '<td><input type="text" name="CLOCKWORK_WEEKLY_SUMMARY_TIME" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_WEEKLY_SUMMARY_TIME', '09:35')).'"></td>';
+print '</tr>';
+
+print '<tr class="liste_titre"><td>IP Restriction (Access Control)</td><td></td></tr>';
+
+print '<tr class="oddeven">';
+print '<td>Allowed IP ranges</td>';
+print '<td><input class="minwidth300" type="text" name="CLOCKWORK_ALLOWED_IPS" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_ALLOWED_IPS')).'">';
+print '<br><span class="opacitymedium">CIDR notation, comma separated (e.g. 10.0.0.0/8, 192.168.1.0/24). Leave empty to allow all IPs.</span></td>';
+print '</tr>';
+
+print '<tr class="liste_titre"><td>Overwork Detection</td><td></td></tr>';
+
+print '<tr class="oddeven">';
+print '<td>Enable overwork alerts</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_NOTIFY_OVERWORK', getDolGlobalInt('CLOCKWORK_NOTIFY_OVERWORK', 1), 1).'</td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Overwork threshold (hours)</td>';
+print '<td><input type="number" min="1" max="24" step="1" name="CLOCKWORK_OVERWORK_THRESHOLD_HOURS" value="'.((int) getDolGlobalInt('CLOCKWORK_OVERWORK_THRESHOLD_HOURS', 4)).'">';
+print '<br><span class="opacitymedium">Alert when user works continuously without a break for this many hours.</span></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Overwork webhook URL (optional override)</td>';
+print '<td><input class="minwidth300" type="text" name="CLOCKWORK_WEBHOOK_OVERWORK" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_WEBHOOK_OVERWORK')).'"></td>';
+print '</tr>';
+
+print '<tr class="liste_titre"><td>Logout Reminder</td><td></td></tr>';
+
+print '<tr class="oddeven">';
+print '<td>Enable logout reminders</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_NOTIFY_LOGOUT_REMINDER', getDolGlobalInt('CLOCKWORK_NOTIFY_LOGOUT_REMINDER', 1), 1).'</td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Reminder cutoff time (HH:MM)</td>';
+print '<td><input type="text" name="CLOCKWORK_LOGOUT_REMINDER_CUTOFF" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_LOGOUT_REMINDER_CUTOFF', '23:00')).'">';
+print '<br><span class="opacitymedium">Send reminder to users who haven\'t clocked out after this time.</span></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Reminder timezone</td>';
+print '<td><input type="text" name="CLOCKWORK_LOGOUT_REMINDER_TZ" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_LOGOUT_REMINDER_TZ', 'Africa/Lagos')).'"></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Logout reminder webhook URL (optional override)</td>';
+print '<td><input class="minwidth300" type="text" name="CLOCKWORK_WEBHOOK_LOGOUT_REMINDER" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_WEBHOOK_LOGOUT_REMINDER')).'"></td>';
+print '</tr>';
+
+print '<tr class="liste_titre"><td>Network Change Monitoring</td><td></td></tr>';
+
+print '<tr class="oddeven">';
+print '<td>Enable network change alerts</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_NOTIFY_NETWORK_CHANGE', getDolGlobalInt('CLOCKWORK_NOTIFY_NETWORK_CHANGE', 1), 1).'</td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Monitor network changes during shifts</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_MONITOR_NETWORK_CHANGES', getDolGlobalInt('CLOCKWORK_MONITOR_NETWORK_CHANGES', 1), 1);
+print '<br><span class="opacitymedium">Alert when a user\'s IP address changes during an active shift.</span></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Network change webhook URL (optional override)</td>';
+print '<td><input class="minwidth300" type="text" name="CLOCKWORK_WEBHOOK_NETWORK_CHANGE" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_WEBHOOK_NETWORK_CHANGE')).'"></td>';
 print '</tr>';
 
 print '</table>';

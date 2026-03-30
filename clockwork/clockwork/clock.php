@@ -22,11 +22,22 @@ if (!$res) {
 require_once DOL_DOCUMENT_ROOT.'/custom/clockwork/class/clockworkshift.class.php';
 require_once DOL_DOCUMENT_ROOT.'/custom/clockwork/class/clockworkbreak.class.php';
 require_once DOL_DOCUMENT_ROOT.'/custom/clockwork/lib/clockwork.lib.php';
+require_once DOL_DOCUMENT_ROOT.'/custom/clockwork/lib/clockwork_ipcheck.lib.php';
 
 $langs->loadLangs(array('clockwork@clockwork'));
 
 if (!isModEnabled('clockwork')) accessforbidden();
 if (!$user->hasRight('clockwork', 'clock')) accessforbidden();
+
+// IP restriction check
+$ipCheck = clockworkCheckIPRestriction();
+if ($ipCheck['blocked']) {
+	llxHeader('', $langs->trans('ClockworkMyTime'));
+	clockworkRenderBlockedPage($ipCheck);
+	llxFooter();
+	$db->close();
+	exit;
+}
 
 $action = GETPOST('action', 'aZ09');
 $note = (string) GETPOST('note', 'restricthtml');

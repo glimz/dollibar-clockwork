@@ -49,3 +49,34 @@ ClockworkBreakNotOpen=No active break to end.
 
 ClockworkApiAllowCors=Allow CORS for Clockwork API
 
+ClockworkIPRestriction=IP Restriction (Access Control)
+ClockworkAllowedIPs=Allowed IP ranges
+ClockworkAllowedIPsHelp=CIDR notation, comma separated (e.g. 10.0.0.0/8, 192.168.1.0/24). Leave empty to allow all IPs.
+
+ClockworkOverworkDetection=Overwork Detection
+ClockworkNotifyOverwork=Enable overwork alerts
+ClockworkOverworkThreshold=Overwork threshold (hours)
+ClockworkOverworkThresholdHelp=Alert when user works continuously without a break for this many hours.
+ClockworkWebhookOverwork=Overwork webhook URL (optional override)
+
+ClockworkLogoutReminder=Logout Reminder
+ClockworkNotifyLogoutReminder=Enable logout reminders
+ClockworkLogoutReminderCutoff=Reminder cutoff time (HH:MM)
+ClockworkLogoutReminderCutoffHelp=Send reminder to users who haven't clocked out after this time.
+ClockworkLogoutReminderTZ=Reminder timezone
+ClockworkWebhookLogoutReminder=Logout reminder webhook URL (optional override)
+
+ClockworkNetworkChange=Network Change Monitoring
+ClockworkNotifyNetworkChange=Enable network change alerts
+ClockworkMonitorNetworkChanges=Monitor network changes during shifts
+ClockworkMonitorNetworkChangesHelp=Alert when a user's IP address changes during an active shift.
+ClockworkWebhookNetworkChange=Network change webhook URL (optional override)
+
+ClockworkAccessDenied=Access Denied
+ClockworkAccessDeniedMsg=You are in the wrong location or not connected to the corporate network.
+ClockworkYourIP=Your IP Address
+ClockworkDetectedLocation=Detected Location
+ClockworkNetworkOrg=Network/Org
+ClockworkConnectVPN=Please connect to the corporate VPN or office network to access Clockwork.
+ClockworkContactIT=If you believe this is an error, contact your IT administrator.
+
