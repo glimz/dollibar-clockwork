@@ -116,10 +116,24 @@ if ($action === 'save') {
 if ($action === 'test_webhook') {
 	$type = (string) GETPOST('type', 'aZ09');
 	if (empty($type)) $type = CLOCKWORK_NOTIFY_TYPE_CLOCKIN;
-	$msg = '[Clockwork] Test notification ('.$type.') sent at '.dol_print_date(dol_now(), 'dayhour');
-	$res = clockworkSendDiscordWebhook($type, array('content' => $msg));
+
+	// Use rich embed for test webhook
+	$fields = array(
+		clockworkEmbedField('Type', $type, true),
+		clockworkEmbedField('Time', dol_print_date(dol_now(), 'dayhour'), true),
+		clockworkEmbedField('Status', 'Test notification', true),
+	);
+
+	$res = clockworkNotifyEmbed($type, array(
+		'title' => '🔔 Test Notification',
+		'description' => 'This is a test webhook from Clockwork setup.',
+		'color' => 3447003, // Blue
+		'fields' => $fields,
+		'footer' => 'Clockwork • Setup Test',
+	));
+
 	if (!empty($res['ok'])) {
-		setEventMessages('Webhook test sent.', null, 'mesgs');
+		setEventMessages('Webhook test sent (rich embed).', null, 'mesgs');
 	} else {
 		setEventMessages('Webhook test failed: '.(!empty($res['error']) ? $res['error'] : 'unknown error'), null, 'errors');
 	}
