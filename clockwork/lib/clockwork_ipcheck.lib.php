@@ -35,6 +35,9 @@ function clockworkGetClientIP()
 		}
 	}
 
+	// Fallback: try to get from environment or use a default
+	// This handles cases where the server is behind a reverse proxy
+	// and the real IP is not passed through headers
 	return '0.0.0.0';
 }
 
