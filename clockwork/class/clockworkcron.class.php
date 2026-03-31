@@ -183,9 +183,21 @@ class ClockworkCron
 
 		if (!empty($missing)) {
 			$cutoffText = sprintf('%02d:%02d', $cutoffHour, $cutoffMin).($graceMin > 0 ? ' +'.$graceMin.'m' : '');
-			$msg = '[Clockwork] Missing clock-in after '.$cutoffText.' '.$tzName.' on '.$nowLocal->format('Y-m-d').":\n";
-			$msg .= "- ".implode("\n- ", $missing);
-			$res = clockworkSendDiscordWebhook(CLOCKWORK_NOTIFY_TYPE_MISSED_CLOCKIN, array('content' => $msg));
+			
+			// Build rich embed notification
+			$fields = array(
+				clockworkEmbedField('Date', $nowLocal->format('Y-m-d'), true),
+				clockworkEmbedField('Cutoff', $cutoffText.' '.$tzName, true),
+				clockworkEmbedField('Missing Users', implode("\n", $missing), false),
+			);
+
+			$res = clockworkNotifyEmbed(CLOCKWORK_NOTIFY_TYPE_MISSED_CLOCKIN, array(
+				'title' => '⏰ Missing Clock-In Alert',
+				'description' => 'The following users have not clocked in after the cutoff time.',
+				'color' => 16744448, // Orange
+				'fields' => $fields,
+				'footer' => 'Clockwork • Missed Clock-In',
+			));
 			if (empty($res['ok'])) {
 				dol_syslog('Clockwork missed clock-in webhook failed: '.json_encode($res), LOG_ERR);
 			}
