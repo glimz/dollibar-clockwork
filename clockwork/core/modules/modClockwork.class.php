@@ -378,6 +378,23 @@ class modClockwork extends DolibarrModules
 			'target' => '',
 			'user' => 0,
 		);
+
+		// Monthly compliance
+		$r++;
+		$this->menu[$r] = array(
+			'fk_menu' => 'fk_mainmenu=hrm,fk_leftmenu=clockwork',
+			'type' => 'left',
+			'titre' => 'ClockworkMonthlyCompliance',
+			'mainmenu' => 'hrm',
+			'leftmenu' => 'clockwork_monthly_compliance',
+			'url' => '/custom/clockwork/clockwork/monthly_compliance.php',
+			'langs' => 'clockwork@clockwork',
+			'position' => 130,
+			'enabled' => 'isModEnabled("clockwork")',
+			'perms' => '$user->hasRight("clockwork","readall")',
+			'target' => '',
+			'user' => 0,
+		);
 	}
 
 	/**

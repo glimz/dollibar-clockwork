@@ -153,3 +153,21 @@ ClockworkEnableShiftPatternDetection=Enable shift pattern violation detection
 ClockworkShiftPatternGraceMinutes=Grace period (minutes)
 ClockworkShiftPatternGraceHelp=Allowed deviation from expected shift pattern in minutes.
 
+# Monthly Compliance
+ClockworkMonthlyCompliance=Monthly Compliance
+ClockworkCompliant=Compliant
+ClockworkNearTarget=Near Target
+ClockworkBelowTarget=Below Target
+ClockworkTotalDeductions=Total Deductions
+ClockworkRecalculate=Recalculate
+ClockworkSendEmails=Send Email Notifications
+ClockworkComplianceCalculated=Compliance calculated for %s users
+ClockworkComplianceApproved=Compliance record approved
+ClockworkEmailsSent=%s emails sent
+ClockworkExpectedHours=Expected Hours
+ClockworkActualHours=Actual Hours
+ClockworkCompliancePct=Compliance %
+ClockworkMissedDays=Missed Days
+ClockworkDeduction=Deduction
+ClockworkApproved=Approved
+
