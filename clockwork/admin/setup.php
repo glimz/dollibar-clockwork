@@ -108,6 +108,52 @@ if ($action === 'save') {
 	dolibarr_set_const($db, 'CLOCKWORK_WEBHOOK_NETWORK_CHANGE', $webhookNetwork, 'chaine', 0, '', $conf->entity);
 	dolibarr_set_const($db, 'CLOCKWORK_NOTIFY_NETWORK_CHANGE', GETPOSTINT('CLOCKWORK_NOTIFY_NETWORK_CHANGE'), 'yesno', 0, '', $conf->entity);
 
+	// Browser notifications settings
+	dolibarr_set_const($db, 'CLOCKWORK_ENABLE_BROWSER_NOTIFICATIONS', GETPOSTINT('CLOCKWORK_ENABLE_BROWSER_NOTIFICATIONS'), 'yesno', 0, '', $conf->entity);
+
+	// Maximum shift length settings
+	$webhookMaxShift = (string) GETPOST('CLOCKWORK_WEBHOOK_MAX_SHIFT', 'nohtml');
+	dolibarr_set_const($db, 'CLOCKWORK_WEBHOOK_MAX_SHIFT', $webhookMaxShift, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_NOTIFY_MAX_SHIFT', GETPOSTINT('CLOCKWORK_NOTIFY_MAX_SHIFT'), 'yesno', 0, '', $conf->entity);
+	$maxShiftHours = GETPOSTINT('CLOCKWORK_MAX_SHIFT_HOURS');
+	dolibarr_set_const($db, 'CLOCKWORK_MAX_SHIFT_HOURS', $maxShiftHours, 'integer', 0, '', $conf->entity);
+
+	// Escalating break reminders
+	dolibarr_set_const($db, 'CLOCKWORK_ENABLE_ESCALATING_BREAK_REMINDERS', GETPOSTINT('CLOCKWORK_ENABLE_ESCALATING_BREAK_REMINDERS'), 'yesno', 0, '', $conf->entity);
+	$breakReminderHours = GETPOST('CLOCKWORK_BREAK_REMINDER_HOURS', 'nohtml');
+	dolibarr_set_const($db, 'CLOCKWORK_BREAK_REMINDER_HOURS', $breakReminderHours, 'chaine', 0, '', $conf->entity);
+
+	// Weekly overtime detection
+	$webhookOvertime = (string) GETPOST('CLOCKWORK_WEBHOOK_OVERTIME', 'nohtml');
+	dolibarr_set_const($db, 'CLOCKWORK_WEBHOOK_OVERTIME', $webhookOvertime, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_NOTIFY_OVERTIME', GETPOSTINT('CLOCKWORK_NOTIFY_OVERTIME'), 'yesno', 0, '', $conf->entity);
+	$weeklyOvertimeHours = GETPOSTINT('CLOCKWORK_WEEKLY_OVERTIME_HOURS');
+	dolibarr_set_const($db, 'CLOCKWORK_WEEKLY_OVERTIME_HOURS', $weeklyOvertimeHours, 'integer', 0, '', $conf->entity);
+
+	// Slack/Teams webhooks
+	$slackWebhook = (string) GETPOST('CLOCKWORK_WEBHOOK_SLACK', 'nohtml');
+	dolibarr_set_const($db, 'CLOCKWORK_WEBHOOK_SLACK', $slackWebhook, 'chaine', 0, '', $conf->entity);
+	$teamsWebhook = (string) GETPOST('CLOCKWORK_WEBHOOK_TEAMS', 'nohtml');
+	dolibarr_set_const($db, 'CLOCKWORK_WEBHOOK_TEAMS', $teamsWebhook, 'chaine', 0, '', $conf->entity);
+
+	// Fatigue management settings
+	dolibarr_set_const($db, 'CLOCKWORK_NOTIFY_FATIGUE', GETPOSTINT('CLOCKWORK_NOTIFY_FATIGUE'), 'yesno', 0, '', $conf->entity);
+	$minRestHours = GETPOST('CLOCKWORK_MIN_REST_HOURS', 'nohtml');
+	dolibarr_set_const($db, 'CLOCKWORK_MIN_REST_HOURS', $minRestHours, 'chaine', 0, '', $conf->entity);
+
+	// Auto-close shifts settings
+	dolibarr_set_const($db, 'CLOCKWORK_AUTO_CLOSE_SHIFTS', GETPOSTINT('CLOCKWORK_AUTO_CLOSE_SHIFTS'), 'yesno', 0, '', $conf->entity);
+	$autoCloseHours = GETPOSTINT('CLOCKWORK_AUTO_CLOSE_HOURS');
+	dolibarr_set_const($db, 'CLOCKWORK_AUTO_CLOSE_HOURS', $autoCloseHours, 'integer', 0, '', $conf->entity);
+
+	// Concurrent session detection
+	dolibarr_set_const($db, 'CLOCKWORK_DETECT_CONCURRENT', GETPOSTINT('CLOCKWORK_DETECT_CONCURRENT'), 'yesno', 0, '', $conf->entity);
+
+	// Shift pattern violation detection
+	dolibarr_set_const($db, 'CLOCKWORK_DETECT_SHIFT_PATTERN', GETPOSTINT('CLOCKWORK_DETECT_SHIFT_PATTERN'), 'yesno', 0, '', $conf->entity);
+	$shiftPatternGrace = GETPOSTINT('CLOCKWORK_SHIFT_PATTERN_GRACE');
+	dolibarr_set_const($db, 'CLOCKWORK_SHIFT_PATTERN_GRACE', $shiftPatternGrace, 'integer', 0, '', $conf->entity);
+
 	setEventMessages($langs->trans('SetupSaved'), null, 'mesgs');
 	header('Location: '.$_SERVER['PHP_SELF']);
 	exit;
@@ -338,6 +384,123 @@ print '</tr>';
 print '<tr class="oddeven">';
 print '<td>Network change webhook URL (optional override)</td>';
 print '<td><input class="minwidth300" type="text" name="CLOCKWORK_WEBHOOK_NETWORK_CHANGE" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_WEBHOOK_NETWORK_CHANGE')).'"></td>';
+print '</tr>';
+
+print '<tr class="liste_titre"><td>'.$langs->trans('ClockworkBrowserNotifications').'</td><td></td></tr>';
+
+print '<tr class="oddeven">';
+print '<td>'.$langs->trans('ClockworkEnableBrowserNotifications').'</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_ENABLE_BROWSER_NOTIFICATIONS', getDolGlobalInt('CLOCKWORK_ENABLE_BROWSER_NOTIFICATIONS', 1), 1);
+print '<br><span class="opacitymedium">'.$langs->trans('ClockworkEnableBrowserNotificationsHelp').'</span></td>';
+print '</tr>';
+
+print '<tr class="liste_titre"><td>'.$langs->trans('ClockworkMaxShiftLength').'</td><td></td></tr>';
+
+print '<tr class="oddeven">';
+print '<td>'.$langs->trans('ClockworkEnableMaxShiftAlerts').'</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_NOTIFY_MAX_SHIFT', getDolGlobalInt('CLOCKWORK_NOTIFY_MAX_SHIFT', 1), 1).'</td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>'.$langs->trans('ClockworkMaxShiftHours').'</td>';
+print '<td><input type="number" min="1" max="24" step="1" name="CLOCKWORK_MAX_SHIFT_HOURS" value="'.((int) getDolGlobalInt('CLOCKWORK_MAX_SHIFT_HOURS', 12)).'">';
+print '<br><span class="opacitymedium">'.$langs->trans('ClockworkMaxShiftHoursHelp').'</span></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>'.$langs->trans('ClockworkWebhookMaxShift').'</td>';
+print '<td><input class="minwidth300" type="text" name="CLOCKWORK_WEBHOOK_MAX_SHIFT" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_WEBHOOK_MAX_SHIFT')).'"></td>';
+print '</tr>';
+
+print '<tr class="liste_titre"><td>'.$langs->trans('ClockworkEscalatingBreakReminders').'</td><td></td></tr>';
+
+print '<tr class="oddeven">';
+print '<td>'.$langs->trans('ClockworkEnableEscalatingBreakReminders').'</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_ENABLE_ESCALATING_BREAK_REMINDERS', getDolGlobalInt('CLOCKWORK_ENABLE_ESCALATING_BREAK_REMINDERS', 1), 1).'</td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>'.$langs->trans('ClockworkBreakReminderHours').'</td>';
+print '<td><input type="text" name="CLOCKWORK_BREAK_REMINDER_HOURS" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_BREAK_REMINDER_HOURS', '2,3,3.5,4')).'">';
+print '<br><span class="opacitymedium">'.$langs->trans('ClockworkBreakReminderHoursHelp').'</span></td>';
+print '</tr>';
+
+print '<tr class="liste_titre"><td>'.$langs->trans('ClockworkWeeklyOvertime').'</td><td></td></tr>';
+
+print '<tr class="oddeven">';
+print '<td>'.$langs->trans('ClockworkEnableWeeklyOvertime').'</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_NOTIFY_OVERTIME', getDolGlobalInt('CLOCKWORK_NOTIFY_OVERTIME', 1), 1).'</td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>'.$langs->trans('ClockworkWeeklyOvertimeHours').'</td>';
+print '<td><input type="number" min="1" max="168" step="1" name="CLOCKWORK_WEEKLY_OVERTIME_HOURS" value="'.((int) getDolGlobalInt('CLOCKWORK_WEEKLY_OVERTIME_HOURS', 48)).'">';
+print '<br><span class="opacitymedium">'.$langs->trans('ClockworkWeeklyOvertimeHoursHelp').'</span></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>'.$langs->trans('ClockworkWebhookOvertime').'</td>';
+print '<td><input class="minwidth300" type="text" name="CLOCKWORK_WEBHOOK_OVERTIME" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_WEBHOOK_OVERTIME')).'"></td>';
+print '</tr>';
+
+print '<tr class="liste_titre"><td>'.$langs->trans('ClockworkSlackTeamsWebhooks').'</td><td></td></tr>';
+
+print '<tr class="oddeven">';
+print '<td>'.$langs->trans('ClockworkSlackWebhookURL').'</td>';
+print '<td><input class="minwidth300" type="text" name="CLOCKWORK_WEBHOOK_SLACK" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_WEBHOOK_SLACK')).'">';
+print '<br><span class="opacitymedium">'.$langs->trans('ClockworkSlackWebhookHelp').'</span></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>'.$langs->trans('ClockworkTeamsWebhookURL').'</td>';
+print '<td><input class="minwidth300" type="text" name="CLOCKWORK_WEBHOOK_TEAMS" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_WEBHOOK_TEAMS')).'">';
+print '<br><span class="opacitymedium">'.$langs->trans('ClockworkTeamsWebhookHelp').'</span></td>';
+print '</tr>';
+
+print '<tr class="liste_titre"><td>'.$langs->trans('ClockworkFatigueManagement').'</td><td></td></tr>';
+
+print '<tr class="oddeven">';
+print '<td>'.$langs->trans('ClockworkEnableFatigueAlerts').'</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_NOTIFY_FATIGUE', getDolGlobalInt('CLOCKWORK_NOTIFY_FATIGUE', 1), 1).'</td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>'.$langs->trans('ClockworkMinRestHours').'</td>';
+print '<td><input type="text" name="CLOCKWORK_MIN_REST_HOURS" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_MIN_REST_HOURS', '8')).'">';
+print '<br><span class="opacitymedium">'.$langs->trans('ClockworkMinRestHoursHelp').'</span></td>';
+print '</tr>';
+
+print '<tr class="liste_titre"><td>'.$langs->trans('ClockworkAutoCloseShifts').'</td><td></td></tr>';
+
+print '<tr class="oddeven">';
+print '<td>'.$langs->trans('ClockworkEnableAutoClose').'</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_AUTO_CLOSE_SHIFTS', getDolGlobalInt('CLOCKWORK_AUTO_CLOSE_SHIFTS', 1), 1).'</td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>'.$langs->trans('ClockworkAutoCloseHours').'</td>';
+print '<td><input type="number" min="1" max="24" step="1" name="CLOCKWORK_AUTO_CLOSE_HOURS" value="'.((int) getDolGlobalInt('CLOCKWORK_AUTO_CLOSE_HOURS', 16)).'">';
+print '<br><span class="opacitymedium">'.$langs->trans('ClockworkAutoCloseHoursHelp').'</span></td>';
+print '</tr>';
+
+print '<tr class="liste_titre"><td>'.$langs->trans('ClockworkConcurrentSessions').'</td><td></td></tr>';
+
+print '<tr class="oddeven">';
+print '<td>'.$langs->trans('ClockworkEnableConcurrentDetection').'</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_DETECT_CONCURRENT', getDolGlobalInt('CLOCKWORK_DETECT_CONCURRENT', 1), 1).'</td>';
+print '</tr>';
+
+print '<tr class="liste_titre"><td>'.$langs->trans('ClockworkShiftPatternViolations').'</td><td></td></tr>';
+
+print '<tr class="oddeven">';
+print '<td>'.$langs->trans('ClockworkEnableShiftPatternDetection').'</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_DETECT_SHIFT_PATTERN', getDolGlobalInt('CLOCKWORK_DETECT_SHIFT_PATTERN', 0), 1).'</td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>'.$langs->trans('ClockworkShiftPatternGraceMinutes').'</td>';
+print '<td><input type="number" min="0" max="120" step="5" name="CLOCKWORK_SHIFT_PATTERN_GRACE" value="'.((int) getDolGlobalInt('CLOCKWORK_SHIFT_PATTERN_GRACE', 15)).'">';
+print '<br><span class="opacitymedium">'.$langs->trans('ClockworkShiftPatternGraceHelp').'</span></td>';
 print '</tr>';
 
 print '</table>';

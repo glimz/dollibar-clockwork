@@ -80,3 +80,76 @@ ClockworkNetworkOrg=Network/Org
 ClockworkConnectVPN=Please connect to the corporate VPN or office network to access Clockwork.
 ClockworkContactIT=If you believe this is an error, contact your IT administrator.
 
+# Browser Notifications
+ClockworkBrowserNotifications=Browser Notifications
+ClockworkEnableBrowserNotifications=Enable browser notifications
+ClockworkEnableBrowserNotificationsHelp=Receive real-time notifications directly in your browser (in addition to Discord webhooks)
+ClockworkNotificationPermission=Notification Permission
+ClockworkNotificationsEnabled=Notifications enabled
+ClockworkNotificationsDisabled=Notifications disabled
+ClockworkNotificationsDenied=Notifications blocked
+ClockworkEnableNotificationsButton=Enable Notifications
+ClockworkDisableNotificationsButton=Disable Notifications
+ClockworkNotificationTest=Test Notification
+ClockworkNotificationTestSent=Test notification sent
+ClockworkNotificationClockIn=You have successfully clocked in
+ClockworkNotificationClockOut=You have successfully clocked out
+ClockworkNotificationBreakStart=Break started
+ClockworkNotificationBreakEnd=Break ended
+ClockworkNotificationOverwork=⚠️ You have been working continuously for %s hours. Please take a break!
+ClockworkNotificationLogoutReminder=🔔 Don't forget to clock out! You've been working for %s hours
+ClockworkNotificationMaxShift=⚠️ Your shift has reached the maximum duration of %s hours
+ClockworkNotificationEscalatingBreak=💡 You've been working for %s hours without a break. Consider taking one!
+ClockworkNotificationIPChange=🚨 Your network connection has changed during your shift
+ClockworkNotificationPermissionRequest=Would you like to receive real-time notifications from Clockwork?
+
+# Maximum Shift Length
+ClockworkMaxShiftLength=Maximum Shift Length
+ClockworkEnableMaxShiftAlerts=Enable maximum shift alerts
+ClockworkMaxShiftHours=Maximum shift duration (hours)
+ClockworkMaxShiftHoursHelp=Alert when a single shift exceeds this duration
+ClockworkWebhookMaxShift=Maximum shift webhook URL (optional override)
+
+# Escalating Break Reminders
+ClockworkEscalatingBreakReminders=Escalating Break Reminders
+ClockworkEnableEscalatingBreakReminders=Enable escalating break reminders
+ClockworkBreakReminderHours=Break reminder intervals (hours)
+ClockworkBreakReminderHoursHelp=Comma-separated hours when to send reminders (e.g., 2,3,3.5,4)
+
+# Weekly Overtime
+ClockworkWeeklyOvertime=Weekly Overtime Detection
+ClockworkEnableWeeklyOvertime=Enable weekly overtime alerts
+ClockworkWeeklyOvertimeHours=Weekly overtime threshold (hours)
+ClockworkWeeklyOvertimeHoursHelp=Alert when user's weekly hours exceed this value (e.g., 48 for EU limit)
+ClockworkWebhookOvertime=Weekly overtime webhook URL (optional override)
+
+# Slack/Teams Webhooks
+ClockworkSlackTeamsWebhooks=Slack & Microsoft Teams Webhooks
+ClockworkSlackWebhookURL=Slack webhook URL
+ClockworkSlackWebhookHelp=Slack Incoming Webhook URL for notifications
+ClockworkTeamsWebhookURL=Microsoft Teams webhook URL
+ClockworkTeamsWebhookHelp=Teams Incoming Webhook URL for notifications
+
+# Fatigue Management
+ClockworkFatigueManagement=Fatigue Management
+ClockworkEnableFatigueAlerts=Enable fatigue management alerts
+ClockworkMinRestHours=Minimum rest between shifts (hours)
+ClockworkMinRestHoursHelp=Minimum required rest time between shifts. Alert if user has less rest than this.
+
+# Auto-Close Shifts
+ClockworkAutoCloseShifts=Auto-Close Shifts
+ClockworkEnableAutoClose=Enable automatic shift closure
+ClockworkAutoCloseHours=Auto-close after (hours)
+ClockworkAutoCloseHoursHelp=Automatically close shifts that exceed this duration. Set to 0 to disable.
+
+# Concurrent Sessions
+ClockworkConcurrentSessions=Concurrent Session Detection
+ClockworkEnableConcurrentDetection=Enable concurrent session detection
+ClockworkEnableConcurrentDetectionHelp=Alert when a user has multiple active shifts simultaneously.
+
+# Shift Pattern Violations
+ClockworkShiftPatternViolations=Shift Pattern Violations
+ClockworkEnableShiftPatternDetection=Enable shift pattern violation detection
+ClockworkShiftPatternGraceMinutes=Grace period (minutes)
+ClockworkShiftPatternGraceHelp=Allowed deviation from expected shift pattern in minutes.
+
