@@ -334,12 +334,13 @@ class ClockworkCron
 		$now = dol_now();
 		$denylist = getDolGlobalString('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', '');
 
-		// Get all open shifts
-		$sql = 'SELECT s.rowid, s.fk_user, s.clockin, s.ip, u.login, u.firstname, u.lastname';
+		// Get all open shifts (only for active users)
+		$sql = 'SELECT s.rowid, s.fk_user, s.clockin, s.ip, u.login, u.firstname, u.lastname, u.statut';
 		$sql .= ' FROM ' . MAIN_DB_PREFIX . 'clockwork_shift as s';
 		$sql .= ' JOIN ' . MAIN_DB_PREFIX . 'user as u ON u.rowid = s.fk_user';
 		$sql .= ' WHERE s.entity = ' . ((int) $conf->entity);
 		$sql .= ' AND s.status = 0';
+		$sql .= ' AND u.statut = 1'; // Only active users
 
 		$resql = $this->db->query($sql);
 		if (!$resql) {
@@ -463,12 +464,13 @@ class ClockworkCron
 
 		$denylist = getDolGlobalString('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', '');
 
-		// Get all open shifts
+		// Get all open shifts (only for active users)
 		$sql = 'SELECT s.rowid, s.fk_user, s.clockin, u.login, u.firstname, u.lastname';
 		$sql .= ' FROM ' . MAIN_DB_PREFIX . 'clockwork_shift as s';
 		$sql .= ' JOIN ' . MAIN_DB_PREFIX . 'user as u ON u.rowid = s.fk_user';
 		$sql .= ' WHERE s.entity = ' . ((int) $conf->entity);
 		$sql .= ' AND s.status = 0';
+		$sql .= ' AND u.statut = 1'; // Only active users
 
 		$resql = $this->db->query($sql);
 		if (!$resql) {
@@ -526,12 +528,13 @@ class ClockworkCron
 		$now = dol_now();
 		$denylist = getDolGlobalString('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', '');
 
-		// Get all open shifts
+		// Get all open shifts (only for active users)
 		$sql = 'SELECT s.rowid, s.fk_user, s.clockin, s.ip, u.login, u.firstname, u.lastname';
 		$sql .= ' FROM ' . MAIN_DB_PREFIX . 'clockwork_shift as s';
 		$sql .= ' JOIN ' . MAIN_DB_PREFIX . 'user as u ON u.rowid = s.fk_user';
 		$sql .= ' WHERE s.entity = ' . ((int) $conf->entity);
 		$sql .= ' AND s.status = 0';
+		$sql .= ' AND u.statut = 1'; // Only active users
 
 		$resql = $this->db->query($sql);
 		if (!$resql) {
@@ -614,12 +617,13 @@ class ClockworkCron
 		$now = dol_now();
 		$denylist = getDolGlobalString('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', '');
 
-		// Get all open shifts
+		// Get all open shifts (only for active users)
 		$sql = 'SELECT s.rowid, s.fk_user, s.clockin, u.login, u.firstname, u.lastname';
 		$sql .= ' FROM ' . MAIN_DB_PREFIX . 'clockwork_shift as s';
 		$sql .= ' JOIN ' . MAIN_DB_PREFIX . 'user as u ON u.rowid = s.fk_user';
 		$sql .= ' WHERE s.entity = ' . ((int) $conf->entity);
 		$sql .= ' AND s.status = 0';
+		$sql .= ' AND u.statut = 1'; // Only active users
 
 		$resql = $this->db->query($sql);
 		if (!$resql) {
@@ -835,12 +839,13 @@ class ClockworkCron
 		$now = dol_now();
 		$denylist = getDolGlobalString('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', '');
 
-		// Get all open shifts
+		// Get all open shifts (only for active users)
 		$sql = 'SELECT s.rowid, s.fk_user, s.clockin, s.ip, u.login, u.firstname, u.lastname';
 		$sql .= ' FROM ' . MAIN_DB_PREFIX . 'clockwork_shift as s';
 		$sql .= ' JOIN ' . MAIN_DB_PREFIX . 'user as u ON u.rowid = s.fk_user';
 		$sql .= ' WHERE s.entity = ' . ((int) $conf->entity);
 		$sql .= ' AND s.status = 0';
+		$sql .= ' AND u.statut = 1'; // Only active users
 
 		$resql = $this->db->query($sql);
 		if (!$resql) {
