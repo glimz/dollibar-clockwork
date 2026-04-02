@@ -50,8 +50,11 @@ class InterfaceClockworkTriggers
 		require_once DOL_DOCUMENT_ROOT.'/custom/clockwork/lib/clockwork_webhook.lib.php';
 		require_once DOL_DOCUMENT_ROOT.'/custom/clockwork/lib/clockwork.lib.php';
 
-		$denylist = getDolGlobalString('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', '');
-		if (!empty($user->login) && clockworkIsLoginExcluded($user->login, $denylist)) {
+		$notifyType = CLOCKWORK_NOTIFY_TYPE_CLOCKIN;
+		if ($action === 'CLOCKWORK_BREAK_START' || $action === 'CLOCKWORK_BREAK_END') {
+			$notifyType = CLOCKWORK_NOTIFY_TYPE_BREAK;
+		}
+		if (clockworkShouldSkipNotificationUser($this->db, (int) $user->id, (string) $user->login, $notifyType)) {
 			return 0;
 		}
 

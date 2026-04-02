@@ -93,6 +93,11 @@ if ($action === 'save') {
 	dolibarr_set_const($db, 'CLOCKWORK_NOTIFY_OVERWORK', GETPOSTINT('CLOCKWORK_NOTIFY_OVERWORK'), 'yesno', 0, '', $conf->entity);
 	$overworkThreshold = GETPOSTINT('CLOCKWORK_OVERWORK_THRESHOLD_HOURS');
 	dolibarr_set_const($db, 'CLOCKWORK_OVERWORK_THRESHOLD_HOURS', $overworkThreshold, 'integer', 0, '', $conf->entity);
+	$webhookIdle = (string) GETPOST('CLOCKWORK_WEBHOOK_IDLE', 'nohtml');
+	dolibarr_set_const($db, 'CLOCKWORK_WEBHOOK_IDLE', $webhookIdle, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_NOTIFY_IDLE', GETPOSTINT('CLOCKWORK_NOTIFY_IDLE'), 'yesno', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_IDLE_THRESHOLD_MINUTES', GETPOSTINT('CLOCKWORK_IDLE_THRESHOLD_MINUTES'), 'integer', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_IDLE_REMINDER_MINUTES', GETPOSTINT('CLOCKWORK_IDLE_REMINDER_MINUTES'), 'integer', 0, '', $conf->entity);
 
 	// Logout reminder settings
 	$webhookLogout = (string) GETPOST('CLOCKWORK_WEBHOOK_LOGOUT_REMINDER', 'nohtml');
@@ -153,6 +158,24 @@ if ($action === 'save') {
 	dolibarr_set_const($db, 'CLOCKWORK_DETECT_SHIFT_PATTERN', GETPOSTINT('CLOCKWORK_DETECT_SHIFT_PATTERN'), 'yesno', 0, '', $conf->entity);
 	$shiftPatternGrace = GETPOSTINT('CLOCKWORK_SHIFT_PATTERN_GRACE');
 	dolibarr_set_const($db, 'CLOCKWORK_SHIFT_PATTERN_GRACE', $shiftPatternGrace, 'integer', 0, '', $conf->entity);
+
+	// Compliance defaults
+	$defaultHoursPerDay = (string) GETPOST('CLOCKWORK_HOURS_PER_DAY', 'nohtml');
+	$deductionPerMissedDay = (string) GETPOST('CLOCKWORK_DEDUCTION_PERCENT_PER_MISSED_DAY', 'nohtml');
+	$deductionMinCompliance = (string) GETPOST('CLOCKWORK_DEDUCTION_MIN_COMPLIANCE', 'nohtml');
+	$deductionMaxPercent = (string) GETPOST('CLOCKWORK_DEDUCTION_MAX_PERCENT', 'nohtml');
+	$payslipEmailOnGenerate = GETPOSTINT('CLOCKWORK_PAYSLIP_EMAIL_ON_GENERATE');
+	$payslipMinAmount = (string) GETPOST('CLOCKWORK_PAYSLIP_MIN_AMOUNT', 'nohtml');
+	$payslipEmailTemplateFile = (string) GETPOST('CLOCKWORK_PAYSLIP_EMAIL_TEMPLATE_FILE', 'nohtml');
+	$payslipPdfTemplateFile = (string) GETPOST('CLOCKWORK_PAYSLIP_PDF_TEMPLATE_FILE', 'nohtml');
+	dolibarr_set_const($db, 'CLOCKWORK_HOURS_PER_DAY', $defaultHoursPerDay, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_DEDUCTION_PERCENT_PER_MISSED_DAY', $deductionPerMissedDay, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_DEDUCTION_MIN_COMPLIANCE', $deductionMinCompliance, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_DEDUCTION_MAX_PERCENT', $deductionMaxPercent, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_PAYSLIP_EMAIL_ON_GENERATE', $payslipEmailOnGenerate, 'yesno', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_PAYSLIP_MIN_AMOUNT', $payslipMinAmount, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_PAYSLIP_EMAIL_TEMPLATE_FILE', $payslipEmailTemplateFile, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_PAYSLIP_PDF_TEMPLATE_FILE', $payslipPdfTemplateFile, 'chaine', 0, '', $conf->entity);
 
 	setEventMessages($langs->trans('SetupSaved'), null, 'mesgs');
 	header('Location: '.$_SERVER['PHP_SELF']);
@@ -319,6 +342,51 @@ print '<td>Time (HH:MM)</td>';
 print '<td><input type="text" name="CLOCKWORK_WEEKLY_SUMMARY_TIME" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_WEEKLY_SUMMARY_TIME', '09:35')).'"></td>';
 print '</tr>';
 
+print '<tr class="liste_titre"><td>Monthly compliance defaults</td><td></td></tr>';
+
+print '<tr class="oddeven">';
+print '<td>Default hours per day</td>';
+print '<td><input type="number" min="1" max="24" step="0.25" name="CLOCKWORK_HOURS_PER_DAY" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_HOURS_PER_DAY', '8')).'"></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Deduction percent per missed day</td>';
+print '<td><input type="number" min="0" max="100" step="0.01" name="CLOCKWORK_DEDUCTION_PERCENT_PER_MISSED_DAY" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_DEDUCTION_PERCENT_PER_MISSED_DAY', '10')).'"></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Minimum compliance for no deduction (%)</td>';
+print '<td><input type="number" min="0" max="100" step="0.01" name="CLOCKWORK_DEDUCTION_MIN_COMPLIANCE" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_DEDUCTION_MIN_COMPLIANCE', '90')).'"></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Maximum total deduction cap (%)</td>';
+print '<td><input type="number" min="0" max="100" step="0.01" name="CLOCKWORK_DEDUCTION_MAX_PERCENT" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_DEDUCTION_MAX_PERCENT', '100')).'"></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Auto-email payslip on generation</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_PAYSLIP_EMAIL_ON_GENERATE', getDolGlobalInt('CLOCKWORK_PAYSLIP_EMAIL_ON_GENERATE', 0), 1).'</td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Minimum payslip amount when net is zero</td>';
+print '<td><input type="number" min="0.01" max="9999" step="0.01" name="CLOCKWORK_PAYSLIP_MIN_AMOUNT" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_PAYSLIP_MIN_AMOUNT', '0.01')).'">';
+print '<br><span class="opacitymedium">Dolibarr salary object rejects empty/zero amount. This minimum is used only when net salary is 0.</span></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Payslip email template file</td>';
+print '<td><input class="minwidth500" type="text" name="CLOCKWORK_PAYSLIP_EMAIL_TEMPLATE_FILE" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_PAYSLIP_EMAIL_TEMPLATE_FILE', DOL_DOCUMENT_ROOT.'/custom/clockwork/templates/payslip_email_template.html')).'">';
+print '<br><span class="opacitymedium">Absolute filesystem path to an HTML template with placeholders: {{employee_name}}, {{month_label}}, {{gross}}, {{deduction}}, {{net}}, {{pdf_url}}, {{my_payslips_url}}, {{salary_url}}.</span></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Payslip PDF template file</td>';
+print '<td><input class="minwidth500" type="text" name="CLOCKWORK_PAYSLIP_PDF_TEMPLATE_FILE" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_PAYSLIP_PDF_TEMPLATE_FILE', DOL_DOCUMENT_ROOT.'/custom/clockwork/templates/payslip_pdf_template.html')).'">';
+print '<br><span class="opacitymedium">Absolute filesystem path to an HTML template used to render the dedicated payslip PDF.</span></td>';
+print '</tr>';
+
 print '<tr class="liste_titre"><td>IP Restriction (Access Control)</td><td></td></tr>';
 
 print '<tr class="oddeven">';
@@ -343,6 +411,29 @@ print '</tr>';
 print '<tr class="oddeven">';
 print '<td>Overwork webhook URL (optional override)</td>';
 print '<td><input class="minwidth300" type="text" name="CLOCKWORK_WEBHOOK_OVERWORK" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_WEBHOOK_OVERWORK')).'"></td>';
+print '</tr>';
+
+print '<tr class="liste_titre"><td>Idle Detection</td><td></td></tr>';
+
+print '<tr class="oddeven">';
+print '<td>Enable idle alerts</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_NOTIFY_IDLE', getDolGlobalInt('CLOCKWORK_NOTIFY_IDLE', 1), 1).'</td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Idle threshold (minutes)</td>';
+print '<td><input type="number" min="1" max="480" step="1" name="CLOCKWORK_IDLE_THRESHOLD_MINUTES" value="'.((int) getDolGlobalInt('CLOCKWORK_IDLE_THRESHOLD_MINUTES', 20)).'">';
+print '<br><span class="opacitymedium">If no heartbeat/activity is received for this duration while shift is open, an idle alert is triggered.</span></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Idle reminder interval (minutes)</td>';
+print '<td><input type="number" min="1" max="480" step="1" name="CLOCKWORK_IDLE_REMINDER_MINUTES" value="'.((int) getDolGlobalInt('CLOCKWORK_IDLE_REMINDER_MINUTES', 30)).'"></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Idle webhook URL (optional override)</td>';
+print '<td><input class="minwidth300" type="text" name="CLOCKWORK_WEBHOOK_IDLE" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_WEBHOOK_IDLE')).'"></td>';
 print '</tr>';
 
 print '<tr class="liste_titre"><td>Logout Reminder</td><td></td></tr>';

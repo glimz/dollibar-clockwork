@@ -18,6 +18,7 @@ const CLOCKWORK_NOTIFY_TYPE_FATIGUE = 'fatigue';
 const CLOCKWORK_NOTIFY_TYPE_AUTO_CLOSE = 'auto_close';
 const CLOCKWORK_NOTIFY_TYPE_CONCURRENT = 'concurrent';
 const CLOCKWORK_NOTIFY_TYPE_SHIFT_PATTERN = 'shift_pattern';
+const CLOCKWORK_NOTIFY_TYPE_IDLE = 'idle';
 
 /**
  * Webhook platform types.
@@ -80,6 +81,7 @@ function clockworkGetWebhookUrl($type, $platform = CLOCKWORK_PLATFORM_DISCORD)
 		CLOCKWORK_NOTIFY_TYPE_AUTO_CLOSE => 'CLOCKWORK_WEBHOOK_OVERWORK',
 		CLOCKWORK_NOTIFY_TYPE_CONCURRENT => 'CLOCKWORK_WEBHOOK_NETWORK_CHANGE',
 		CLOCKWORK_NOTIFY_TYPE_SHIFT_PATTERN => 'CLOCKWORK_WEBHOOK_MISSED_CLOCKIN',
+		CLOCKWORK_NOTIFY_TYPE_IDLE => 'CLOCKWORK_WEBHOOK_IDLE',
 	);
 
 	$const = isset($map[$type]) ? $map[$type] : '';
@@ -108,6 +110,7 @@ function clockworkIsNotificationEnabled($type)
 		CLOCKWORK_NOTIFY_TYPE_AUTO_CLOSE => 'CLOCKWORK_NOTIFY_AUTO_CLOSE',
 		CLOCKWORK_NOTIFY_TYPE_CONCURRENT => 'CLOCKWORK_NOTIFY_CONCURRENT',
 		CLOCKWORK_NOTIFY_TYPE_SHIFT_PATTERN => 'CLOCKWORK_NOTIFY_SHIFT_PATTERN',
+		CLOCKWORK_NOTIFY_TYPE_IDLE => 'CLOCKWORK_NOTIFY_IDLE',
 	);
 	$const = isset($map[$type]) ? $map[$type] : '';
 	if (!$const) return false;
@@ -728,5 +731,32 @@ function clockworkNotifyShiftPattern($login, $userId, $expectedPattern, $actualC
 		'color' => 16776960, // Yellow
 		'fields' => $fields,
 		'footer' => 'Clockwork • Shift Pattern',
+	));
+}
+
+/**
+ * Send idle shift alert.
+ *
+ * @param string $login
+ * @param int    $shiftId
+ * @param int    $idleSeconds
+ * @param string $lastActivityText
+ * @return array{ok:bool,results:array}
+ */
+function clockworkNotifyIdle($login, $shiftId, $idleSeconds, $lastActivityText)
+{
+	$fields = array(
+		clockworkEmbedField('User', $login, true),
+		clockworkEmbedField('Shift', '#'.$shiftId, true),
+		clockworkEmbedField('Idle Time', clockworkFormatDuration((int) $idleSeconds), true),
+		clockworkEmbedField('Last Activity', $lastActivityText, true),
+	);
+
+	return clockworkNotifyEmbed(CLOCKWORK_NOTIFY_TYPE_IDLE, array(
+		'title' => '😴 Idle Shift Alert',
+		'description' => 'Open shift appears idle beyond threshold.',
+		'color' => 16098851,
+		'fields' => $fields,
+		'footer' => 'Clockwork • Idle Detection',
 	));
 }

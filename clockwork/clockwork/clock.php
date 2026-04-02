@@ -201,10 +201,33 @@ if ($resqlRecent) {
 $overworkThreshold = (int) getDolGlobalInt('CLOCKWORK_OVERWORK_THRESHOLD_HOURS', 4) * 3600;
 $isOverworking = $continuousWorkSeconds >= $overworkThreshold;
 
+// Browser notification settings
+$enableBrowserNotifications = getDolGlobalInt('CLOCKWORK_ENABLE_BROWSER_NOTIFICATIONS', 1);
+
+// Maximum shift length settings
+$enableMaxShiftAlert = getDolGlobalInt('CLOCKWORK_NOTIFY_MAX_SHIFT', 1);
+$maxShiftHours = (int) getDolGlobalInt('CLOCKWORK_MAX_SHIFT_HOURS', 12);
+$maxShiftSeconds = $maxShiftHours * 3600;
+
+// Escalating break reminders
+$enableEscalatingBreakReminders = getDolGlobalInt('CLOCKWORK_ENABLE_ESCALATING_BREAK_REMINDERS', 1);
+$breakReminderHoursStr = getDolGlobalString('CLOCKWORK_BREAK_REMINDER_HOURS', '2,3,3.5,4');
+$breakReminderHours = array_map('floatval', array_filter(array_map('trim', explode(',', $breakReminderHoursStr))));
+$breakReminderSeconds = array_map(function($h) { return $h * 3600; }, $breakReminderHours);
+
 // Current IP
 $currentIP = clockworkGetClientIP();
 
-llxHeader('', $langs->trans('ClockworkMyTime'));
+$pwaManifestUrl = DOL_URL_ROOT.'/custom/clockwork/pwa/manifest.json';
+$pwaServiceWorkerUrl = DOL_URL_ROOT.'/custom/clockwork/pwa/service-worker.js';
+$pwaScopeUrl = DOL_URL_ROOT.'/custom/clockwork/';
+$pwaHead = '<link rel="manifest" href="'.dol_escape_htmltag($pwaManifestUrl).'">';
+$pwaHead .= '<meta name="theme-color" content="#1a73e8">';
+$pwaHead .= '<meta name="mobile-web-app-capable" content="yes">';
+$pwaHead .= '<meta name="apple-mobile-web-app-capable" content="yes">';
+$pwaHead .= '<meta name="apple-mobile-web-app-title" content="Clockwork">';
+
+llxHeader($pwaHead, $langs->trans('ClockworkMyTime'));
 
 print load_fiche_titre($langs->trans('ClockworkMyTime'), '', 'calendar');
 
@@ -245,6 +268,16 @@ print '<style>
 .clockwork-overwork-alert { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
 .clockwork-overwork-alert .icon { font-size: 24px; }
 .clockwork-overwork-alert .text { font-size: 13px; color: #856404; }
+.clockwork-notif-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.clockwork-notif-count { display:inline-block; min-width:20px; text-align:center; padding:2px 8px; border-radius:999px; background:#dc3545; color:#fff; font-size:12px; font-weight:700; }
+.clockwork-notif-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+.clockwork-notif-item { border:1px solid #ececec; border-radius:8px; padding:10px; background:#fafafa; }
+.clockwork-notif-item.warning { border-color:#f6d365; background:#fff8e6; }
+.clockwork-notif-item.error { border-color:#f5c2c7; background:#fff1f2; }
+.clockwork-notif-item .t { font-weight:600; font-size:13px; color:#212529; }
+.clockwork-notif-item .m { margin-top:3px; font-size:12px; color:#495057; }
+.clockwork-notif-item .d { margin-top:4px; font-size:11px; color:#6c757d; }
+.clockwork-notif-empty { color:#6c757d; font-size:13px; }
 </style>';
 
 print '<div class="clockwork-dashboard">';
@@ -380,9 +413,32 @@ print '<div class="opacitymedium" style="margin-top:8px;">'.$langs->trans('NoteW
 print '</form>';
 print '</div>';
 
+// In-app notifications card
+print '<div class="clockwork-card full-width">';
+print '<div class="clockwork-notif-head">';
+print '<h3 style="margin:0;">'.$langs->trans('ClockworkInAppNotifications').'</h3>';
+print '<div>';
+print '<span id="cw_inapp_count" class="clockwork-notif-count" style="display:none;">0</span> ';
+print '<button id="cw_mark_read" class="butActionRefused" type="button">'.$langs->trans('ClockworkMarkAllRead').'</button>';
+print '</div>';
+print '</div>';
+print '<ul id="cw_inapp_list" class="clockwork-notif-list"><li class="clockwork-notif-empty">'.$langs->trans('ClockworkNoNotifications').'</li></ul>';
+print '</div>';
+
 print '</div>'; // clockwork-dashboard
 
 print dol_get_fiche_end();
+
+// Browser notification settings passed to JS
+$enableBrowserNotificationsJson = json_encode((bool) $enableBrowserNotifications);
+$maxShiftSecondsJson = json_encode($maxShiftSeconds);
+$enableMaxShiftAlertJson = json_encode((bool) $enableMaxShiftAlert);
+$enableEscalatingBreakRemindersJson = json_encode((bool) $enableEscalatingBreakReminders);
+$breakReminderSecondsJson = json_encode($breakReminderSeconds);
+$overworkThresholdJson = json_encode($overworkThreshold);
+$heartbeatUrlJson = json_encode(DOL_URL_ROOT.'/custom/clockwork/ajax/heartbeat.php');
+$notifUrlJson = json_encode(DOL_URL_ROOT.'/custom/clockwork/ajax/notifications.php');
+$notifEmptyTextJson = json_encode($langs->trans('ClockworkNoNotifications'));
 
 print '<script>
 (function () {
@@ -390,9 +446,153 @@ print '<script>
   const breakstart = '.((int) $openBreakStartTs).';
   const closedBreak = '.((int) $closedBreakSeconds).';
   const serverNow = '.((int) $serverNow).';
+  const hasOpenShift = '.((int) $hasOpenShift).';
+  const shiftId = '.($hasOpenShift > 0 ? (int) $shift->id : 0).';
 
   const clientNow = Math.floor(Date.now() / 1000);
   const offset = serverNow ? (serverNow - clientNow) : 0;
+
+  // Browser notification settings
+  const browserNotificationsEnabled = '.$enableBrowserNotificationsJson.';
+  const maxShiftSeconds = '.$maxShiftSecondsJson.';
+  const maxShiftAlertEnabled = '.$enableMaxShiftAlertJson.';
+  const escalatingBreakRemindersEnabled = '.$enableEscalatingBreakRemindersJson.';
+  const breakReminderSeconds = '.$breakReminderSecondsJson.';
+  const overworkThresholdSeconds = '.$overworkThresholdJson.';
+  const heartbeatUrl = '.$heartbeatUrlJson.';
+  const notifUrl = '.$notifUrlJson.';
+  const notifEmptyText = '.$notifEmptyTextJson.';
+
+  // Track which notifications have been shown
+  let shownNotifications = {
+    maxShift: false,
+    breakReminders: {},
+    overwork: false
+  };
+
+  // Load shown notifications from sessionStorage
+  try {
+    const saved = sessionStorage.getItem("clockwork_notifications");
+    if (saved) shownNotifications = JSON.parse(saved);
+  } catch(e) {}
+
+  function saveShownNotifications() {
+    try {
+      sessionStorage.setItem("clockwork_notifications", JSON.stringify(shownNotifications));
+    } catch(e) {}
+  }
+
+  // Browser notification helper
+  function sendBrowserNotification(title, body, icon) {
+    if (!browserNotificationsEnabled) return;
+    if (!("Notification" in window)) return;
+    if (Notification.permission !== "granted") return;
+
+    const options = {
+      body: body,
+      icon: icon || "/custom/clockwork/img/clockwork-icon.png",
+      badge: "/custom/clockwork/img/clockwork-badge.png",
+      tag: "clockwork-" + Date.now(),
+      requireInteraction: false
+    };
+
+    try {
+      new Notification(title, options);
+    } catch(e) {
+      console.log("Browser notification error:", e);
+    }
+  }
+
+  // Request notification permission
+  function requestNotificationPermission() {
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "granted") return;
+    if (Notification.permission === "denied") return;
+
+    Notification.requestPermission().then(function(permission) {
+      console.log("Notification permission:", permission);
+      updateNotificationStatus();
+    });
+  }
+
+  // Update notification status display
+  function updateNotificationStatus() {
+    const statusEl = document.getElementById("cw_notification_status");
+    const btnEl = document.getElementById("cw_notification_btn");
+    if (!statusEl) return;
+
+    if (!("Notification" in window)) {
+      statusEl.textContent = "'.$langs->trans('ClockworkNotificationsDenied').'";
+      statusEl.className = "clockwork-notification-status denied";
+      if (btnEl) btnEl.style.display = "none";
+    } else if (Notification.permission === "granted") {
+      statusEl.textContent = "'.$langs->trans('ClockworkNotificationsEnabled').'";
+      statusEl.className = "clockwork-notification-status enabled";
+      if (btnEl) btnEl.style.display = "none";
+    } else if (Notification.permission === "denied") {
+      statusEl.textContent = "'.$langs->trans('ClockworkNotificationsDenied').'";
+      statusEl.className = "clockwork-notification-status denied";
+      if (btnEl) btnEl.style.display = "none";
+    } else {
+      statusEl.textContent = "'.$langs->trans('ClockworkNotificationsDisabled').'";
+      statusEl.className = "clockwork-notification-status disabled";
+      if (btnEl) btnEl.style.display = "inline-block";
+    }
+  }
+
+  // Check for max shift alert
+  function checkMaxShiftAlert(workedSeconds) {
+    if (!maxShiftAlertEnabled || !hasOpenShift) return;
+    if (shownNotifications.maxShift) return;
+    if (workedSeconds >= maxShiftSeconds) {
+      const hours = (workedSeconds / 3600).toFixed(1);
+      sendBrowserNotification(
+        "'.$langs->trans('ClockworkNotificationMaxShift').'",
+        "'.$langs->trans('ClockworkNotificationMaxShift').'",
+        "⚠️"
+      );
+      shownNotifications.maxShift = true;
+      saveShownNotifications();
+    }
+  }
+
+  // Check for escalating break reminders
+  function checkBreakReminders(continuousSeconds) {
+    if (!escalatingBreakRemindersEnabled || !hasOpenShift) return;
+    
+    for (let i = 0; i < breakReminderSeconds.length; i++) {
+      const threshold = breakReminderSeconds[i];
+      const key = "break_" + i;
+      if (shownNotifications.breakReminders[key]) continue;
+      
+      if (continuousSeconds >= threshold) {
+        const hours = (continuousSeconds / 3600).toFixed(1);
+        sendBrowserNotification(
+          "'.$langs->trans('ClockworkNotificationEscalatingBreak').'",
+          "'.$langs->trans('ClockworkNotificationEscalatingBreak').'",
+          "💡"
+        );
+        shownNotifications.breakReminders[key] = true;
+        saveShownNotifications();
+      }
+    }
+  }
+
+  // Check for overwork alert
+  function checkOverworkAlert(continuousSeconds) {
+    if (!hasOpenShift) return;
+    if (shownNotifications.overwork) return;
+    if (continuousSeconds >= overworkThresholdSeconds) {
+      const hours = (continuousSeconds / 3600).toFixed(1);
+      sendBrowserNotification(
+        "'.$langs->trans('ClockworkNotificationOverwork').'",
+        "'.$langs->trans('ClockworkNotificationOverwork').'",
+        "⚠️"
+      );
+      shownNotifications.overwork = true;
+      saveShownNotifications();
+    }
+  }
 
   function fmt(sec) {
     sec = Math.max(0, sec|0);
@@ -414,12 +614,93 @@ print '<script>
     const openBreak = breakstart ? Math.max(0, now - breakstart) : 0;
     const breakTotal = Math.max(0, closedBreak + openBreak);
     const net = Math.max(0, worked - breakTotal);
+    const continuousWork = breakstart > 0 ? openBreak : (now - (clockin + closedBreak));
+    
     setText("cw_worked", fmt(worked));
     setText("cw_break", fmt(breakTotal));
     setText("cw_net", fmt(net));
     setText("cw_timer", fmt(net));
     setText("cw_session_duration", fmt(worked));
-    setText("cw_since_break", fmt(openBreak > 0 ? openBreak : (now - (clockin + closedBreak))));
+    setText("cw_since_break", fmt(continuousWork > 0 ? continuousWork : 0));
+
+    // Check for alerts
+    checkMaxShiftAlert(worked);
+    checkBreakReminders(continuousWork > 0 ? continuousWork : 0);
+    checkOverworkAlert(continuousWork > 0 ? continuousWork : 0);
+  }
+
+  function sendHeartbeat() {
+    if (!hasOpenShift) return;
+    if (!window.fetch) return;
+    fetch(heartbeatUrl, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {"X-Requested-With": "XMLHttpRequest"}
+    }).catch(function(){});
+  }
+
+  function esc(s) {
+    return String(s || "").replace(/[&<>"\']/g, function(c) {
+      return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","\'":"&#39;"}[c] || c;
+    });
+  }
+
+  function renderInAppNotifications(data) {
+    const countEl = document.getElementById("cw_inapp_count");
+    const listEl = document.getElementById("cw_inapp_list");
+    if (!countEl || !listEl) return;
+
+    const unread = (data && typeof data.unread === "number") ? data.unread : 0;
+    if (unread > 0) {
+      countEl.style.display = "inline-block";
+      countEl.textContent = String(unread);
+    } else {
+      countEl.style.display = "none";
+      countEl.textContent = "0";
+    }
+
+    const items = (data && Array.isArray(data.items)) ? data.items : [];
+    if (!items.length) {
+      listEl.innerHTML = "<li class=\"clockwork-notif-empty\">" + esc(notifEmptyText) + "</li>";
+      return;
+    }
+
+    const html = items.map(function(it) {
+      const sev = esc(it.severity || "info");
+      const title = esc(it.title || "");
+      const msg = esc(it.message || "");
+      const datec = esc(it.datec_label || "");
+      return "<li class=\"clockwork-notif-item " + sev + "\">"
+        + "<div class=\"t\">" + title + "</div>"
+        + (msg ? "<div class=\"m\">" + msg + "</div>" : "")
+        + "<div class=\"d\">" + datec + "</div>"
+        + "</li>";
+    }).join("");
+    listEl.innerHTML = html;
+  }
+
+  function loadInAppNotifications() {
+    if (!window.fetch) return;
+    fetch(notifUrl + "?action=list&limit=8", {
+      method: "GET",
+      credentials: "same-origin",
+      headers: {"X-Requested-With": "XMLHttpRequest"}
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){ renderInAppNotifications(data); })
+    .catch(function(){});
+  }
+
+  function markAllInAppRead() {
+    if (!window.fetch) return;
+    fetch(notifUrl + "?action=mark_all_read", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {"X-Requested-With": "XMLHttpRequest"}
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(){ loadInAppNotifications(); })
+    .catch(function(){});
   }
 
   // Keep note in the same POST form that contains the buttons.
@@ -435,10 +716,61 @@ print '<script>
     sync();
   }
 
+  const markReadBtn = document.getElementById("cw_mark_read");
+  if (markReadBtn) {
+    markReadBtn.addEventListener("click", markAllInAppRead);
+  }
+
+  // Initialize notifications on page load
+  if (browserNotificationsEnabled) {
+    updateNotificationStatus();
+    // Auto-request permission if not denied
+    if ("Notification" in window && Notification.permission === "default") {
+      requestNotificationPermission();
+    }
+  }
+
   tick();
+  sendHeartbeat();
+  loadInAppNotifications();
   window.setInterval(tick, 1000);
+  window.setInterval(sendHeartbeat, 60000);
+  window.setInterval(loadInAppNotifications, 60000);
+
+  let lastActivityBeat = 0;
+  ["mousemove","keydown","click","touchstart"].forEach(function(evt){
+    window.addEventListener(evt, function() {
+      const now = Date.now();
+      if (now - lastActivityBeat > 30000) {
+        lastActivityBeat = now;
+        sendHeartbeat();
+      }
+    }, {passive:true});
+  });
 })();
 </script>';
+
+print '<script>
+(function () {
+  if (!("serviceWorker" in navigator)) return;
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("'.dol_escape_js($pwaServiceWorkerUrl).'", { scope: "'.dol_escape_js($pwaScopeUrl).'" })
+      .catch(function(){});
+  });
+})();
+</script>';
+
+// Add notification status card
+if ($enableBrowserNotifications) {
+  print '<style>
+  .clockwork-notification-status { padding: 8px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .clockwork-notification-status.enabled { background: #e8fff0; color: #0f5132; }
+  .clockwork-notification-status.disabled { background: #fff3cd; color: #664d03; }
+  .clockwork-notification-status.denied { background: #ffe6e6; color: #b91c1c; }
+  .clockwork-notification-btn { cursor: pointer; padding: 6px 12px; border: 1px solid #1a73e8; background: #1a73e8; color: white; border-radius: 6px; font-size: 12px; }
+  .clockwork-notification-btn:hover { background: #1557b0; }
+  </style>';
+}
 
 llxFooter();
 $db->close();

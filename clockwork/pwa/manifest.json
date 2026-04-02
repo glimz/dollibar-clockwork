@@ -1,0 +1,25 @@
+{
+  "name": "Clockwork Time Tracker",
+  "short_name": "Clockwork",
+  "description": "Clock in, track shifts, breaks, and payslips from your Dolibarr workspace.",
+  "start_url": "/custom/clockwork/clockwork/clock.php?source=pwa",
+  "scope": "/custom/clockwork/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f8fb",
+  "theme_color": "#1a73e8",
+  "icons": [
+    {
+      "src": "/custom/clockwork/img/pwa-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/custom/clockwork/img/pwa-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

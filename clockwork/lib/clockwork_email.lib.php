@@ -14,7 +14,7 @@ require_once DOL_DOCUMENT_ROOT.'/custom/clockwork/lib/clockwork.lib.php';
  * @param string $body       Email body (HTML)
  * @return array             Result array with 'ok' and optional 'error'
  */
-function clockworkSendEmail($userId, $type, $subject, $body)
+function clockworkSendEmail($userId, $type, $subject, $body, $attachments = array())
 {
 	global $db, $conf, $mysoc;
 
@@ -91,7 +91,7 @@ function clockworkSendEmail($userId, $type, $subject, $body)
 		$html,              // Body
 		array(),            // Array of target CC
 		array(),            // Array of target BCC
-		array(),            // Array of files to attach
+		$attachments,       // Array of files to attach
 		array(),            // Array of other inline files
 		0,                  // Do not send delivery receipt
 		0,                  // Message ID
@@ -278,4 +278,71 @@ function clockworkEmailScheduleNotification($userId, $type, $schedule)
 	<p>Best regards,<br>Clockwork Team</p>';
 
 	return clockworkSendEmail($userId, 'schedule_notification', $subject, $body);
+}
+
+/**
+ * Send payslip generated email notification.
+ *
+ * @param int   $userId
+ * @param array $payload
+ * @return array
+ */
+function clockworkEmailPayslipGenerated($userId, $payload)
+{
+	global $conf, $db;
+
+	$yearMonth = (string) ($payload['year_month'] ?? '');
+	$salaryId = (int) ($payload['salary_id'] ?? 0);
+	$gross = (float) ($payload['gross'] ?? 0);
+	$deduction = (float) ($payload['deduction'] ?? 0);
+	$net = (float) ($payload['net'] ?? 0);
+	$pdfUrl = (string) ($payload['pdf_url'] ?? '');
+	$pdfFile = (string) ($payload['pdf_file'] ?? '');
+
+	$monthLabel = $yearMonth !== '' ? date('F Y', strtotime($yearMonth . '-01')) : $yearMonth;
+	$subject = '[Clockwork] Payslip Available - ' . $monthLabel;
+
+	$selfUrl = DOL_URL_ROOT.'/custom/clockwork/clockwork/my_payslips.php?year_month='.urlencode($yearMonth);
+	$salaryUrl = DOL_URL_ROOT.'/salaries/card.php?id='.$salaryId;
+	if ($pdfUrl === '') {
+		$pdfUrl = DOL_URL_ROOT.'/custom/clockwork/clockwork/payslip_download.php?compliance_id='.(int) ($payload['compliance_id'] ?? 0);
+	}
+
+	$currency = !empty($conf->currency) ? $conf->currency : '';
+	$employeeName = 'Employee';
+	$resUser = $db->query('SELECT firstname, lastname FROM '.MAIN_DB_PREFIX.'user WHERE rowid = '.((int) $userId));
+	if ($resUser && ($objUser = $db->fetch_object($resUser))) {
+		$tmpName = trim(((string) $objUser->firstname).' '.((string) $objUser->lastname));
+		if ($tmpName !== '') $employeeName = $tmpName;
+	}
+
+	$templatePath = getDolGlobalString('CLOCKWORK_PAYSLIP_EMAIL_TEMPLATE_FILE', '');
+	if ($templatePath === '') {
+		$templatePath = DOL_DOCUMENT_ROOT.'/custom/clockwork/templates/payslip_email_template.html';
+	}
+	$template = '';
+	if (is_readable($templatePath)) {
+		$template = file_get_contents($templatePath);
+	}
+	if ($template === false || $template === '') {
+		$template = '<h2>📄 Payslip Available</h2><p>Hello {{employee_name}},</p><p>Your payslip for <strong>{{month_label}}</strong> has been generated.</p><div class="alert alert-success"><strong>Summary</strong><br>Gross: {{gross}}<br>Deductions: {{deduction}}<br>Net: {{net}}</div><p><a class="button" href="{{pdf_url}}">Download Payslip PDF</a></p><p><a class="button" href="{{my_payslips_url}}">Open My Payslips</a></p><p class="opacitymedium">Salary card link: <a href="{{salary_url}}">{{salary_url}}</a></p>';
+	}
+
+	$body = strtr($template, array(
+		'{{employee_name}}' => dol_escape_htmltag($employeeName),
+		'{{month_label}}' => dol_escape_htmltag($monthLabel),
+		'{{gross}}' => price($gross, 0, null, 1, -1, -1, $currency),
+		'{{deduction}}' => price($deduction, 0, null, 1, -1, -1, $currency),
+		'{{net}}' => price($net, 0, null, 1, -1, -1, $currency),
+		'{{my_payslips_url}}' => dol_escape_htmltag($selfUrl),
+		'{{pdf_url}}' => dol_escape_htmltag($pdfUrl),
+		'{{salary_url}}' => dol_escape_htmltag($salaryUrl),
+	));
+
+	$attachments = array();
+	if ($pdfFile !== '' && is_readable($pdfFile)) {
+		$attachments[] = $pdfFile;
+	}
+
+	return clockworkSendEmail((int) $userId, 'payslip_generated', $subject, $body, $attachments);
 }

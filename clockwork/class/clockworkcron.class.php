@@ -4,6 +4,7 @@ require_once DOL_DOCUMENT_ROOT.'/core/lib/date.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/admin.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/custom/clockwork/lib/clockwork_webhook.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/custom/clockwork/lib/clockwork.lib.php';
+require_once DOL_DOCUMENT_ROOT.'/custom/clockwork/class/clockworknotification.class.php';
 
 /**
  * Cron jobs for Clockwork module (Discord webhook alerts).
@@ -118,11 +119,10 @@ class ClockworkCron
 			return -1;
 		}
 
-		$denylist = getDolGlobalString('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', '');
 		$users = array();
 		while ($obj = $this->db->fetch_object($resql)) {
 			$login = (string) $obj->login;
-			if ($login !== '' && clockworkIsLoginExcluded($login, $denylist)) {
+			if (clockworkShouldSkipNotificationUser($this->db, (int) $obj->rowid, $login, CLOCKWORK_NOTIFY_TYPE_MISSED_CLOCKIN)) {
 				continue;
 			}
 			$users[] = array(
@@ -279,11 +279,10 @@ class ClockworkCron
 			return -1;
 		}
 
-		$denylist = getDolGlobalString('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', '');
 		$lines = array();
 		while ($obj = $this->db->fetch_object($resql)) {
 			$login = (string) $obj->login;
-			if ($login !== '' && clockworkIsLoginExcluded($login, $denylist)) continue;
+			if (clockworkShouldSkipNotificationUser($this->db, (int) $obj->fk_user, $login, CLOCKWORK_NOTIFY_TYPE_WEEKLY_SUMMARY)) continue;
 
 			$name = trim(((string) $obj->firstname).' '.((string) $obj->lastname));
 			$label = $login;
@@ -332,7 +331,6 @@ class ClockworkCron
 		$thresholdSeconds = $thresholdHours * 3600;
 
 		$now = dol_now();
-		$denylist = getDolGlobalString('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', '');
 
 		// Get all open shifts (only for active users)
 		$sql = 'SELECT s.rowid, s.fk_user, s.clockin, s.ip, u.login, u.firstname, u.lastname, u.statut';
@@ -350,7 +348,7 @@ class ClockworkCron
 
 		while ($obj = $this->db->fetch_object($resql)) {
 			$login = (string) $obj->login;
-			if ($login !== '' && clockworkIsLoginExcluded($login, $denylist)) {
+			if (clockworkShouldSkipNotificationUser($this->db, (int) $obj->fk_user, $login, CLOCKWORK_NOTIFY_TYPE_OVERWORK)) {
 				continue;
 			}
 
@@ -462,7 +460,6 @@ class ClockworkCron
 			return 0; // Already sent today
 		}
 
-		$denylist = getDolGlobalString('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', '');
 
 		// Get all open shifts (only for active users)
 		$sql = 'SELECT s.rowid, s.fk_user, s.clockin, u.login, u.firstname, u.lastname';
@@ -481,7 +478,7 @@ class ClockworkCron
 		$reminders = array();
 		while ($obj = $this->db->fetch_object($resql)) {
 			$login = (string) $obj->login;
-			if ($login !== '' && clockworkIsLoginExcluded($login, $denylist)) {
+			if (clockworkShouldSkipNotificationUser($this->db, (int) $obj->fk_user, $login, CLOCKWORK_NOTIFY_TYPE_LOGOUT_REMINDER)) {
 				continue;
 			}
 
@@ -526,7 +523,6 @@ class ClockworkCron
 		$maxShiftHours = (int) getDolGlobalInt('CLOCKWORK_MAX_SHIFT_HOURS', 12);
 		$maxShiftSeconds = $maxShiftHours * 3600;
 		$now = dol_now();
-		$denylist = getDolGlobalString('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', '');
 
 		// Get all open shifts (only for active users)
 		$sql = 'SELECT s.rowid, s.fk_user, s.clockin, s.ip, u.login, u.firstname, u.lastname';
@@ -544,7 +540,7 @@ class ClockworkCron
 
 		while ($obj = $this->db->fetch_object($resql)) {
 			$login = (string) $obj->login;
-			if ($login !== '' && clockworkIsLoginExcluded($login, $denylist)) {
+			if (clockworkShouldSkipNotificationUser($this->db, (int) $obj->fk_user, $login, CLOCKWORK_NOTIFY_TYPE_OVERWORK)) {
 				continue;
 			}
 
@@ -615,7 +611,6 @@ class ClockworkCron
 		$breakReminderHoursStr = getDolGlobalString('CLOCKWORK_BREAK_REMINDER_HOURS', '2,3,3.5,4');
 		$breakReminderHours = array_map('floatval', array_filter(array_map('trim', explode(',', $breakReminderHoursStr))));
 		$now = dol_now();
-		$denylist = getDolGlobalString('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', '');
 
 		// Get all open shifts (only for active users)
 		$sql = 'SELECT s.rowid, s.fk_user, s.clockin, u.login, u.firstname, u.lastname';
@@ -633,7 +628,7 @@ class ClockworkCron
 
 		while ($obj = $this->db->fetch_object($resql)) {
 			$login = (string) $obj->login;
-			if ($login !== '' && clockworkIsLoginExcluded($login, $denylist)) {
+			if (clockworkShouldSkipNotificationUser($this->db, (int) $obj->fk_user, $login, CLOCKWORK_NOTIFY_TYPE_OVERWORK)) {
 				continue;
 			}
 
@@ -731,7 +726,6 @@ class ClockworkCron
 		$minRestHours = (float) getDolGlobalString('CLOCKWORK_MIN_REST_HOURS', '8');
 		$minRestSeconds = $minRestHours * 3600;
 		$now = dol_now();
-		$denylist = getDolGlobalString('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', '');
 
 		// Get all users with clockwork rights
 		$rightClockId = 500202;
@@ -753,7 +747,7 @@ class ClockworkCron
 		$users = array();
 		while ($obj = $this->db->fetch_object($resql)) {
 			$login = (string) $obj->login;
-			if ($login !== '' && clockworkIsLoginExcluded($login, $denylist)) {
+			if (clockworkShouldSkipNotificationUser($this->db, (int) $obj->rowid, $login, CLOCKWORK_NOTIFY_TYPE_FATIGUE)) {
 				continue;
 			}
 			$users[] = array(
@@ -837,7 +831,6 @@ class ClockworkCron
 		$maxShiftHours = (int) getDolGlobalInt('CLOCKWORK_AUTO_CLOSE_HOURS', 16);
 		$maxShiftSeconds = $maxShiftHours * 3600;
 		$now = dol_now();
-		$denylist = getDolGlobalString('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', '');
 
 		// Get all open shifts (only for active users)
 		$sql = 'SELECT s.rowid, s.fk_user, s.clockin, s.ip, u.login, u.firstname, u.lastname';
@@ -855,7 +848,7 @@ class ClockworkCron
 
 		while ($obj = $this->db->fetch_object($resql)) {
 			$login = (string) $obj->login;
-			if ($login !== '' && clockworkIsLoginExcluded($login, $denylist)) {
+			if (clockworkShouldSkipNotificationUser($this->db, (int) $obj->fk_user, $login, CLOCKWORK_NOTIFY_TYPE_AUTO_CLOSE)) {
 				continue;
 			}
 
@@ -908,7 +901,6 @@ class ClockworkCron
 			return 0;
 		}
 
-		$denylist = getDolGlobalString('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', '');
 		$now = dol_now();
 
 		// Find users with multiple open shifts
@@ -938,7 +930,7 @@ class ClockworkCron
 			if (!$objUser) continue;
 
 			$login = (string) $objUser->login;
-			if ($login !== '' && clockworkIsLoginExcluded($login, $denylist)) {
+			if (clockworkShouldSkipNotificationUser($this->db, $userId, $login, CLOCKWORK_NOTIFY_TYPE_CONCURRENT)) {
 				continue;
 			}
 
@@ -973,7 +965,6 @@ class ClockworkCron
 			return 0;
 		}
 
-		$denylist = getDolGlobalString('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', '');
 		$now = dol_now();
 		$today = dol_print_date($now, '%Y-%m-%d');
 
@@ -993,7 +984,7 @@ class ClockworkCron
 
 		while ($obj = $this->db->fetch_object($resql)) {
 			$login = (string) $obj->login;
-			if ($login !== '' && clockworkIsLoginExcluded($login, $denylist)) {
+			if (clockworkShouldSkipNotificationUser($this->db, (int) $obj->rowid, $login, CLOCKWORK_NOTIFY_TYPE_SHIFT_PATTERN)) {
 				continue;
 			}
 
@@ -1081,7 +1072,6 @@ class ClockworkCron
 		$weeklyOvertimeHours = (int) getDolGlobalInt('CLOCKWORK_WEEKLY_OVERTIME_HOURS', 48);
 		$weeklyOvertimeSeconds = $weeklyOvertimeHours * 3600;
 		$now = dol_now();
-		$denylist = getDolGlobalString('CLOCKWORK_NOTIFY_DENYLIST_LOGINS', '');
 
 		// Calculate start of current ISO week
 		$dayOfWeek = (int) dol_print_date($now, '%u'); // 1=Mon, 7=Sun
@@ -1109,7 +1099,7 @@ class ClockworkCron
 		$users = array();
 		while ($obj = $this->db->fetch_object($resql)) {
 			$login = (string) $obj->login;
-			if ($login !== '' && clockworkIsLoginExcluded($login, $denylist)) {
+			if (clockworkShouldSkipNotificationUser($this->db, (int) $obj->rowid, $login, CLOCKWORK_NOTIFY_TYPE_OVERTIME)) {
 				continue;
 			}
 			$users[] = array(
@@ -1187,5 +1177,83 @@ class ClockworkCron
 
 		return 0;
 	}
-}
 
+	/**
+	 * Detect idle open shifts using heartbeat timestamps.
+	 *
+	 * @return int 0 if OK, <0 if error
+	 */
+	public function notifyIdleUsers()
+	{
+		global $conf;
+
+		if (!getDolGlobalInt('CLOCKWORK_NOTIFY_IDLE', 1)) {
+			return 0;
+		}
+
+		$thresholdMinutes = (int) getDolGlobalInt('CLOCKWORK_IDLE_THRESHOLD_MINUTES', 20);
+		$reminderMinutes = (int) getDolGlobalInt('CLOCKWORK_IDLE_REMINDER_MINUTES', 30);
+		$thresholdSeconds = max(60, $thresholdMinutes * 60);
+		$reminderSeconds = max(60, $reminderMinutes * 60);
+		$now = dol_now();
+
+		$sql = 'SELECT s.rowid, s.fk_user, s.clockin, s.last_activity_at, s.idle_notified_at, s.idle_notif_count, u.login, u.firstname, u.lastname';
+		$sql .= ' FROM '.MAIN_DB_PREFIX.'clockwork_shift s';
+		$sql .= ' JOIN '.MAIN_DB_PREFIX.'user u ON u.rowid = s.fk_user';
+		$sql .= ' WHERE s.entity = '.((int) $conf->entity);
+		$sql .= ' AND s.status = 0';
+		$sql .= ' AND u.statut = 1';
+
+		$resql = $this->db->query($sql);
+		if (!$resql) {
+			$this->error = $this->db->lasterror();
+			return -1;
+		}
+
+		$notifService = new ClockworkNotification($this->db);
+
+		while ($obj = $this->db->fetch_object($resql)) {
+			$userId = (int) $obj->fk_user;
+			$shiftId = (int) $obj->rowid;
+			$login = (string) $obj->login;
+
+			if (clockworkShouldSkipNotificationUser($this->db, $userId, $login, CLOCKWORK_NOTIFY_TYPE_IDLE)) {
+				continue;
+			}
+
+			$clockinTs = $this->db->jdate($obj->clockin);
+			$lastActivityTs = !empty($obj->last_activity_at) ? $this->db->jdate($obj->last_activity_at) : $clockinTs;
+			$idleSeconds = max(0, $now - $lastActivityTs);
+			if ($idleSeconds < $thresholdSeconds) {
+				continue;
+			}
+
+			$lastNotifiedTs = !empty($obj->idle_notified_at) ? $this->db->jdate($obj->idle_notified_at) : 0;
+			if ($lastNotifiedTs > 0 && ($now - $lastNotifiedTs) < $reminderSeconds) {
+				continue;
+			}
+
+			$name = trim(((string) $obj->firstname).' '.((string) $obj->lastname));
+			$label = $login;
+			if ($name !== '') $label .= ' ('.$name.')';
+
+			$title = 'Idle Shift Detected';
+			$message = 'No Clockwork activity detected for '.clockworkFormatDuration($idleSeconds).' on active shift #'.$shiftId.'. If you are done, please clock out.';
+			$notifService->create($userId, 'idle', $title, $message, 'warning', $shiftId, array(
+				'idle_seconds' => $idleSeconds,
+				'shift_id' => $shiftId,
+			));
+
+			$lastActivityText = dol_print_date($lastActivityTs, 'dayhourlog');
+			clockworkNotifyIdle($label, $shiftId, $idleSeconds, $lastActivityText);
+
+			$sqlu = 'UPDATE '.MAIN_DB_PREFIX.'clockwork_shift';
+			$sqlu .= ' SET idle_notified_at = \''.$this->db->idate($now).'\'';
+			$sqlu .= ', idle_notif_count = '.(((int) $obj->idle_notif_count) + 1);
+			$sqlu .= ' WHERE rowid = '.$shiftId;
+			$this->db->query($sqlu);
+		}
+
+		return 0;
+	}
+}

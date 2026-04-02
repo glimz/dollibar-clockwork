@@ -1,0 +1,29 @@
+<style>
+	body { font-family: helvetica, sans-serif; color: #222; font-size: 10pt; }
+	.header { border-bottom: 1px solid #ddd; padding-bottom: 8px; margin-bottom: 14px; }
+	.title { font-size: 18pt; font-weight: bold; }
+	.sub { color: #666; font-size: 9pt; }
+	table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+	td { padding: 7px; border-bottom: 1px solid #eee; }
+	.right { text-align: right; }
+	.total td { font-weight: bold; border-top: 2px solid #000; border-bottom: 0; }
+	.meta { margin-top: 12px; color: #666; font-size: 9pt; }
+</style>
+
+<div class="header">
+	<div class="title">Payslip</div>
+	<div class="sub">{{company_name}} | Period: {{month_label}}</div>
+</div>
+
+<table>
+	<tr><td><strong>Employee</strong></td><td class="right">{{employee_name}}</td></tr>
+	<tr><td><strong>Login</strong></td><td class="right">{{employee_login}}</td></tr>
+	<tr><td>Gross Salary</td><td class="right">{{gross}}</td></tr>
+	<tr><td>Deductions ({{deduction_pct}}%)</td><td class="right">{{deduction}}</td></tr>
+	<tr class="total"><td>Net Salary</td><td class="right">{{net}}</td></tr>
+</table>
+
+<div class="meta">
+	Reference: Compliance #{{compliance_id}} | Salary #{{salary_id}}<br>
+	Generated: {{generated_at}}
+</div>

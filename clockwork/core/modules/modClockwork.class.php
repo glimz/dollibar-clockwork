@@ -114,6 +114,18 @@ class modClockwork extends DolibarrModules
 		$this->const[51] = array('CLOCKWORK_DETECT_CONCURRENT', 'yesno', '1', 'Enable concurrent session detection', 0);
 		$this->const[52] = array('CLOCKWORK_DETECT_SHIFT_PATTERN', 'yesno', '0', 'Enable shift pattern violation detection', 0);
 		$this->const[53] = array('CLOCKWORK_SHIFT_PATTERN_GRACE', 'integer', '15', 'Grace period for shift pattern violations (minutes)', 0);
+		$this->const[54] = array('CLOCKWORK_HOURS_PER_DAY', 'chaine', '8', 'Default working hours per day for compliance calculations', 0);
+		$this->const[55] = array('CLOCKWORK_DEDUCTION_PERCENT_PER_MISSED_DAY', 'chaine', '10', 'Default deduction percentage per missed day', 0);
+		$this->const[56] = array('CLOCKWORK_DEDUCTION_MIN_COMPLIANCE', 'chaine', '90', 'Compliance percentage threshold below which deductions apply', 0);
+		$this->const[57] = array('CLOCKWORK_DEDUCTION_MAX_PERCENT', 'chaine', '100', 'Maximum deduction percentage cap', 0);
+		$this->const[58] = array('CLOCKWORK_PAYSLIP_EMAIL_ON_GENERATE', 'yesno', '0', 'Send payslip email automatically after generation', 0);
+		$this->const[59] = array('CLOCKWORK_PAYSLIP_MIN_AMOUNT', 'chaine', '0.01', 'Minimum salary amount used when calculated net is zero', 0);
+		$this->const[60] = array('CLOCKWORK_PAYSLIP_EMAIL_TEMPLATE_FILE', 'chaine', '', 'Absolute path to payslip email HTML template (optional)', 0);
+		$this->const[61] = array('CLOCKWORK_PAYSLIP_PDF_TEMPLATE_FILE', 'chaine', '', 'Absolute path to payslip PDF HTML template (optional)', 0);
+		$this->const[62] = array('CLOCKWORK_NOTIFY_IDLE', 'yesno', '1', 'Enable idle shift alerts', 0);
+		$this->const[63] = array('CLOCKWORK_WEBHOOK_IDLE', 'chaine', '', 'Discord webhook for idle shift alerts (optional override)', 0);
+		$this->const[64] = array('CLOCKWORK_IDLE_THRESHOLD_MINUTES', 'integer', '20', 'Minutes without activity before idle alert', 0);
+		$this->const[65] = array('CLOCKWORK_IDLE_REMINDER_MINUTES', 'integer', '30', 'Minutes between repeated idle alerts', 0);
 
 		// Cronjobs
 		$datestart = dol_now() + 120;
@@ -282,6 +294,21 @@ class modClockwork extends DolibarrModules
 				'status' => 0,
 				'test' => '$conf->clockwork->enabled',
 				'datestart' => $datestart
+			),
+			11 => array(
+				'label' => 'ClockworkIdleDetection:clockwork',
+				'jobtype' => 'method',
+				'class' => 'custom/clockwork/class/clockworkcron.class.php',
+				'objectname' => 'ClockworkCron',
+				'method' => 'notifyIdleUsers',
+				'parameters' => '',
+				'comment' => 'Detect idle open shifts and push in-app/Discord alerts',
+				'frequency' => 1,
+				'unitfrequency' => 300,
+				'priority' => 55,
+				'status' => 1,
+				'test' => '$conf->clockwork->enabled',
+				'datestart' => $datestart
 			)
 		);
 
@@ -324,6 +351,13 @@ class modClockwork extends DolibarrModules
 		$this->rights[$r][3] = 0;
 		$this->rights[$r][4] = 'api';
 
+		$r++;
+		$this->rights[$r][0] = 500206;
+		$this->rights[$r][1] = 'Manage payslip generation from Clockwork';
+		$this->rights[$r][2] = 'w';
+		$this->rights[$r][3] = 0;
+		$this->rights[$r][4] = 'payslipmanage';
+
 		// Menus
 		$this->menu = array();
 		$r = 0;
@@ -362,6 +396,23 @@ class modClockwork extends DolibarrModules
 			'user' => 0,
 		);
 
+		// Employee payslips
+		$r++;
+		$this->menu[$r] = array(
+			'fk_menu' => 'fk_mainmenu=hrm,fk_leftmenu=clockwork',
+			'type' => 'left',
+			'titre' => 'ClockworkMyPayslips',
+			'mainmenu' => 'hrm',
+			'leftmenu' => 'clockwork_my_payslips',
+			'url' => '/custom/clockwork/clockwork/my_payslips.php',
+			'langs' => 'clockwork@clockwork',
+			'position' => 115,
+			'enabled' => 'isModEnabled("clockwork")',
+			'perms' => '$user->hasRight("clockwork","clock")',
+			'target' => '',
+			'user' => 0,
+		);
+
 		// HR totals
 		$r++;
 		$this->menu[$r] = array(
@@ -392,6 +443,23 @@ class modClockwork extends DolibarrModules
 			'position' => 130,
 			'enabled' => 'isModEnabled("clockwork")',
 			'perms' => '$user->hasRight("clockwork","readall")',
+			'target' => '',
+			'user' => 0,
+		);
+
+		// Exclusions management
+		$r++;
+		$this->menu[$r] = array(
+			'fk_menu' => 'fk_mainmenu=hrm,fk_leftmenu=clockwork',
+			'type' => 'left',
+			'titre' => 'ClockworkExclusions',
+			'mainmenu' => 'hrm',
+			'leftmenu' => 'clockwork_exclusions',
+			'url' => '/custom/clockwork/clockwork/exclusions.php',
+			'langs' => 'clockwork@clockwork',
+			'position' => 140,
+			'enabled' => 'isModEnabled("clockwork")',
+			'perms' => '$user->hasRight("clockwork","manage")',
 			'target' => '',
 			'user' => 0,
 		);
