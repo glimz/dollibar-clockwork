@@ -53,8 +53,8 @@ class ClockworkCompliance
 		$sql .= ' FROM ' . MAIN_DB_PREFIX . 'clockwork_shift s';
 		$sql .= ' WHERE s.fk_user = ' . ((int) $userId);
 		$sql .= ' AND s.status = 1'; // Closed shifts only
-		$sql .= ' AND s.clockin >= ' . $this->db->idate($monthStart);
-		$sql .= ' AND s.clockin < ' . $this->db->idate($monthEnd);
+		$sql .= " AND s.clockin >= '" . $this->db->idate($monthStart) . "'";
+		$sql .= " AND s.clockin < '" . $this->db->idate($monthEnd) . "'";
 
 		$resql = $this->db->query($sql);
 		if (!$resql) {
@@ -206,11 +206,11 @@ class ClockworkCompliance
 	{
 		global $conf;
 
-		$sql = 'SELECT c.*, u.login, u.firstname, u.lastname, u.email';
+		$sql = 'SELECT c.rowid, c.fk_user, c.`year_month`, c.expected_hours, c.actual_hours, c.expected_days, c.actual_days, c.missed_days, c.compliance_pct, c.status, c.deduction_pct, c.deduction_amount, c.monthly_salary, c.is_approved, u.login, u.firstname, u.lastname, u.email';
 		$sql .= ' FROM ' . MAIN_DB_PREFIX . 'clockwork_monthly_compliance c';
 		$sql .= ' JOIN ' . MAIN_DB_PREFIX . 'user u ON u.rowid = c.fk_user';
 		$sql .= ' WHERE c.entity = ' . ((int) $conf->entity);
-		$sql .= " AND c.year_month = '" . $this->db->escape($yearMonth) . "'";
+		$sql .= " AND c.`year_month` = '" . $this->db->escape($yearMonth) . "'";
 
 		if (!empty($status)) {
 			$sql .= " AND c.status = '" . $this->db->escape($status) . "'";
@@ -313,7 +313,7 @@ class ClockworkCompliance
 		} else {
 			// Insert new record
 			$sql = 'INSERT INTO ' . MAIN_DB_PREFIX . 'clockwork_monthly_compliance';
-			$sql .= ' (entity, fk_user, year_month, expected_hours, actual_hours, expected_days, actual_days, missed_days, compliance_pct, status, deduction_pct, deduction_amount, monthly_salary, datec)';
+			$sql .= ' (entity, fk_user, `year_month`, expected_hours, actual_hours, expected_days, actual_days, missed_days, compliance_pct, status, deduction_pct, deduction_amount, monthly_salary, datec)';
 			$sql .= ' VALUES (' . ((int) $conf->entity);
 			$sql .= ', ' . ((int) $data['user_id']);
 			$sql .= ", '" . $this->db->escape($data['year_month']) . "'";
