@@ -5,6 +5,7 @@ require_once DOL_DOCUMENT_ROOT.'/core/lib/admin.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/custom/clockwork/lib/clockwork_webhook.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/custom/clockwork/lib/clockwork.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/custom/clockwork/class/clockworknotification.class.php';
+require_once DOL_DOCUMENT_ROOT.'/custom/clockwork/class/clockworkai.class.php';
 
 /**
  * Cron jobs for Clockwork module (Discord webhook alerts).
@@ -1211,6 +1212,7 @@ class ClockworkCron
 		}
 
 		$notifService = new ClockworkNotification($this->db);
+		$aiService = new ClockworkAI($this->db);
 
 		while ($obj = $this->db->fetch_object($resql)) {
 			$userId = (int) $obj->fk_user;
@@ -1239,9 +1241,21 @@ class ClockworkCron
 
 			$title = 'Idle Shift Detected';
 			$message = 'No Clockwork activity detected for '.clockworkFormatDuration($idleSeconds).' on active shift #'.$shiftId.'. If you are done, please clock out.';
+			$aiInsight = $aiService->generateIdleInsight(array(
+				'login' => $login,
+				'label' => $label,
+				'shift_id' => $shiftId,
+				'idle_seconds' => $idleSeconds,
+				'idle_hhmmss' => clockworkFormatDuration($idleSeconds),
+				'last_activity' => dol_print_date($lastActivityTs, 'dayhourlog'),
+			));
+			if (!empty($aiInsight)) {
+				$message .= "\nAI: ".$aiInsight;
+			}
 			$notifService->create($userId, 'idle', $title, $message, 'warning', $shiftId, array(
 				'idle_seconds' => $idleSeconds,
 				'shift_id' => $shiftId,
+				'ai_insight' => $aiInsight,
 			));
 
 			$lastActivityText = dol_print_date($lastActivityTs, 'dayhourlog');

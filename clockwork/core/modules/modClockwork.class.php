@@ -126,6 +126,9 @@ class modClockwork extends DolibarrModules
 		$this->const[63] = array('CLOCKWORK_WEBHOOK_IDLE', 'chaine', '', 'Discord webhook for idle shift alerts (optional override)', 0);
 		$this->const[64] = array('CLOCKWORK_IDLE_THRESHOLD_MINUTES', 'integer', '20', 'Minutes without activity before idle alert', 0);
 		$this->const[65] = array('CLOCKWORK_IDLE_REMINDER_MINUTES', 'integer', '30', 'Minutes between repeated idle alerts', 0);
+		$this->const[66] = array('CLOCKWORK_AI_ENABLE_IDLE_INSIGHTS', 'yesno', '0', 'Use Dolibarr AI module to enrich idle alerts', 0);
+		$this->const[67] = array('CLOCKWORK_AI_IDLE_PROMPT', 'chaine', 'Write one short actionable sentence for an HR idle shift alert. Mention whether user should clock out or resume activity.', 'Prompt used for AI idle insight generation', 0);
+		$this->const[68] = array('CLOCKWORK_AI_IDLE_MAX_CHARS', 'integer', '280', 'Maximum characters for AI-generated idle insight', 0);
 
 		// Cronjobs
 		$datestart = dol_now() + 120;

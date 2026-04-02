@@ -65,6 +65,7 @@ Clockwork is a Dolibarr module for attendance tracking, compliance reporting, pa
 - Slack webhooks
 - Microsoft Teams webhooks
 - Browser notifications
+- Dolibarr AI module integration for personalized idle insights
 - JSON API endpoints for external tooling
 
 ### Security and Access
@@ -116,6 +117,16 @@ Open **Clockwork -> Setup**.
 ### Idle detection
 - `CLOCKWORK_IDLE_THRESHOLD_MINUTES` (default `20`)
 - `CLOCKWORK_IDLE_REMINDER_MINUTES` (default `30`)
+
+### AI personalization (plugin-only)
+- `CLOCKWORK_AI_ENABLE_IDLE_INSIGHTS` (default `0`)
+- `CLOCKWORK_AI_IDLE_PROMPT` (default: `Write one short actionable sentence for an HR idle shift alert. Mention whether user should clock out or resume activity.`)
+- `CLOCKWORK_AI_IDLE_MAX_CHARS` (default `280`, bounded to `80..1000`)
+
+Notes:
+- Uses existing Dolibarr AI module (`AI`) when enabled.
+- No modification is required in Dolibarr core AI files.
+- Fallback behavior stays deterministic if AI is disabled/unavailable.
 
 ### Compliance and deductions
 - `CLOCKWORK_HOURS_PER_DAY` (default `8`)
@@ -199,6 +210,7 @@ Download endpoint:
 ### Idle detection behavior
 - Activity heartbeat updates active open shift timestamps.
 - Idle cron checks inactivity and sends alerts (in-app + webhook).
+- Optional AI enrichment can append personalized one-line guidance to idle alerts.
 
 ---
 

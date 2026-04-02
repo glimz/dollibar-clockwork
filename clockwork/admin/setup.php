@@ -22,6 +22,7 @@ if (!$res) {
 require_once DOL_DOCUMENT_ROOT.'/core/lib/admin.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.form.class.php';
 require_once DOL_DOCUMENT_ROOT.'/custom/clockwork/lib/clockwork_webhook.lib.php';
+require_once DOL_DOCUMENT_ROOT.'/custom/clockwork/class/clockworkai.class.php';
 
 $langs->loadLangs(array('admin', 'clockwork@clockwork'));
 
@@ -98,6 +99,20 @@ if ($action === 'save') {
 	dolibarr_set_const($db, 'CLOCKWORK_NOTIFY_IDLE', GETPOSTINT('CLOCKWORK_NOTIFY_IDLE'), 'yesno', 0, '', $conf->entity);
 	dolibarr_set_const($db, 'CLOCKWORK_IDLE_THRESHOLD_MINUTES', GETPOSTINT('CLOCKWORK_IDLE_THRESHOLD_MINUTES'), 'integer', 0, '', $conf->entity);
 	dolibarr_set_const($db, 'CLOCKWORK_IDLE_REMINDER_MINUTES', GETPOSTINT('CLOCKWORK_IDLE_REMINDER_MINUTES'), 'integer', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_AI_ENABLE_IDLE_INSIGHTS', GETPOSTINT('CLOCKWORK_AI_ENABLE_IDLE_INSIGHTS'), 'yesno', 0, '', $conf->entity);
+	$aiIdlePrompt = (string) GETPOST('CLOCKWORK_AI_IDLE_PROMPT', 'restricthtml');
+	$aiIdlePrompt = trim($aiIdlePrompt);
+	if ($aiIdlePrompt === '') {
+		$aiIdlePrompt = ClockworkAI::DEFAULT_IDLE_PROMPT;
+	}
+	$aiIdleMaxChars = (int) GETPOSTINT('CLOCKWORK_AI_IDLE_MAX_CHARS');
+	if ($aiIdleMaxChars <= 0) {
+		$aiIdleMaxChars = ClockworkAI::DEFAULT_IDLE_MAX_CHARS;
+	}
+	if ($aiIdleMaxChars < 80) $aiIdleMaxChars = 80;
+	if ($aiIdleMaxChars > 1000) $aiIdleMaxChars = 1000;
+	dolibarr_set_const($db, 'CLOCKWORK_AI_IDLE_PROMPT', $aiIdlePrompt, 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'CLOCKWORK_AI_IDLE_MAX_CHARS', $aiIdleMaxChars, 'integer', 0, '', $conf->entity);
 
 	// Logout reminder settings
 	$webhookLogout = (string) GETPOST('CLOCKWORK_WEBHOOK_LOGOUT_REMINDER', 'nohtml');
@@ -434,6 +449,25 @@ print '</tr>';
 print '<tr class="oddeven">';
 print '<td>Idle webhook URL (optional override)</td>';
 print '<td><input class="minwidth300" type="text" name="CLOCKWORK_WEBHOOK_IDLE" value="'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_WEBHOOK_IDLE')).'"></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>Enable AI idle insight (uses Dolibarr AI module)</td>';
+print '<td>'.$form->selectyesno('CLOCKWORK_AI_ENABLE_IDLE_INSIGHTS', getDolGlobalInt('CLOCKWORK_AI_ENABLE_IDLE_INSIGHTS', 0), 1);
+print '<br><span class="opacitymedium">Plugin-only integration: Clockwork calls the installed AI module; no core files are modified.</span></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>AI idle prompt</td>';
+print '<td><textarea class="flat minwidth500" rows="3" name="CLOCKWORK_AI_IDLE_PROMPT">'.dol_escape_htmltag(getDolGlobalString('CLOCKWORK_AI_IDLE_PROMPT', ClockworkAI::DEFAULT_IDLE_PROMPT)).'</textarea>';
+print '<br><span class="opacitymedium">Used only when AI idle insight is enabled. Keep it short and operational.</span>';
+print '<br><span class="opacitymedium">Default: '.dol_escape_htmltag(ClockworkAI::DEFAULT_IDLE_PROMPT).'</span></td>';
+print '</tr>';
+
+print '<tr class="oddeven">';
+print '<td>AI idle max output length (chars)</td>';
+print '<td><input type="number" min="80" max="1000" step="1" name="CLOCKWORK_AI_IDLE_MAX_CHARS" value="'.((int) getDolGlobalInt('CLOCKWORK_AI_IDLE_MAX_CHARS', ClockworkAI::DEFAULT_IDLE_MAX_CHARS)).'">';
+print '<br><span class="opacitymedium">Default: '.((int) ClockworkAI::DEFAULT_IDLE_MAX_CHARS).'</span></td>';
 print '</tr>';
 
 print '<tr class="liste_titre"><td>Logout Reminder</td><td></td></tr>';
