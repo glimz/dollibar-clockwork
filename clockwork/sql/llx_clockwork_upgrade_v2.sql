@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS llx_clockwork_monthly_compliance (
   rowid integer AUTO_INCREMENT PRIMARY KEY,
   entity integer NOT NULL DEFAULT 1,
   fk_user integer NOT NULL,
-  year_month varchar(7) NOT NULL, -- Format: YYYY-MM
+  `year_month` varchar(7) NOT NULL, -- Format: YYYY-MM
   expected_hours decimal(10,2) NOT NULL DEFAULT 0,
   actual_hours decimal(10,2) NOT NULL DEFAULT 0,
   expected_days integer NOT NULL DEFAULT 0,
@@ -57,8 +57,8 @@ CREATE TABLE IF NOT EXISTS llx_clockwork_monthly_compliance (
   note text,
   datec datetime NOT NULL,
   tms timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY uk_user_month (fk_user, year_month),
-  INDEX idx_clockwork_compliance_month (year_month),
+  UNIQUE KEY uk_user_month (fk_user, `year_month`),
+  INDEX idx_clockwork_compliance_month (`year_month`),
   INDEX idx_clockwork_compliance_status (status)
 ) ENGINE=innodb DEFAULT CHARSET=utf8mb4;
 
