@@ -49,3 +49,166 @@ ClockworkBreakNotOpen=No active break to end.
 
 ClockworkApiAllowCors=Allow CORS for Clockwork API
 
+ClockworkIPRestriction=IP Restriction (Access Control)
+ClockworkAllowedIPs=Allowed IP ranges
+ClockworkAllowedIPsHelp=CIDR notation, comma separated (e.g. 10.0.0.0/8, 192.168.1.0/24). Leave empty to allow all IPs.
+
+ClockworkOverworkDetection=Overwork Detection
+ClockworkNotifyOverwork=Enable overwork alerts
+ClockworkOverworkThreshold=Overwork threshold (hours)
+ClockworkOverworkThresholdHelp=Alert when user works continuously without a break for this many hours.
+ClockworkWebhookOverwork=Overwork webhook URL (optional override)
+
+ClockworkLogoutReminder=Logout Reminder
+ClockworkNotifyLogoutReminder=Enable logout reminders
+ClockworkLogoutReminderCutoff=Reminder cutoff time (HH:MM)
+ClockworkLogoutReminderCutoffHelp=Send reminder to users who haven't clocked out after this time.
+ClockworkLogoutReminderTZ=Reminder timezone
+ClockworkWebhookLogoutReminder=Logout reminder webhook URL (optional override)
+
+ClockworkNetworkChange=Network Change Monitoring
+ClockworkNotifyNetworkChange=Enable network change alerts
+ClockworkMonitorNetworkChanges=Monitor network changes during shifts
+ClockworkMonitorNetworkChangesHelp=Alert when a user's IP address changes during an active shift.
+ClockworkWebhookNetworkChange=Network change webhook URL (optional override)
+
+ClockworkAccessDenied=Access Denied
+ClockworkAccessDeniedMsg=You are in the wrong location or not connected to the corporate network.
+ClockworkYourIP=Your IP Address
+ClockworkDetectedLocation=Detected Location
+ClockworkNetworkOrg=Network/Org
+ClockworkConnectVPN=Please connect to the corporate VPN or office network to access Clockwork.
+ClockworkContactIT=If you believe this is an error, contact your IT administrator.
+
+# Browser Notifications
+ClockworkBrowserNotifications=Browser Notifications
+ClockworkEnableBrowserNotifications=Enable browser notifications
+ClockworkEnableBrowserNotificationsHelp=Receive real-time notifications directly in your browser (in addition to Discord webhooks)
+ClockworkNotificationPermission=Notification Permission
+ClockworkNotificationsEnabled=Notifications enabled
+ClockworkNotificationsDisabled=Notifications disabled
+ClockworkNotificationsDenied=Notifications blocked
+ClockworkEnableNotificationsButton=Enable Notifications
+ClockworkDisableNotificationsButton=Disable Notifications
+ClockworkNotificationTest=Test Notification
+ClockworkNotificationTestSent=Test notification sent
+ClockworkNotificationClockIn=You have successfully clocked in
+ClockworkNotificationClockOut=You have successfully clocked out
+ClockworkNotificationBreakStart=Break started
+ClockworkNotificationBreakEnd=Break ended
+ClockworkNotificationOverwork=⚠️ You have been working continuously for %s hours. Please take a break!
+ClockworkNotificationLogoutReminder=🔔 Don't forget to clock out! You've been working for %s hours
+ClockworkNotificationMaxShift=⚠️ Your shift has reached the maximum duration of %s hours
+ClockworkNotificationEscalatingBreak=💡 You've been working for %s hours without a break. Consider taking one!
+ClockworkNotificationIPChange=🚨 Your network connection has changed during your shift
+ClockworkNotificationPermissionRequest=Would you like to receive real-time notifications from Clockwork?
+
+# Maximum Shift Length
+ClockworkMaxShiftLength=Maximum Shift Length
+ClockworkEnableMaxShiftAlerts=Enable maximum shift alerts
+ClockworkMaxShiftHours=Maximum shift duration (hours)
+ClockworkMaxShiftHoursHelp=Alert when a single shift exceeds this duration
+ClockworkWebhookMaxShift=Maximum shift webhook URL (optional override)
+
+# Escalating Break Reminders
+ClockworkEscalatingBreakReminders=Escalating Break Reminders
+ClockworkEnableEscalatingBreakReminders=Enable escalating break reminders
+ClockworkBreakReminderHours=Break reminder intervals (hours)
+ClockworkBreakReminderHoursHelp=Comma-separated hours when to send reminders (e.g., 2,3,3.5,4)
+
+# Weekly Overtime
+ClockworkWeeklyOvertime=Weekly Overtime Detection
+ClockworkEnableWeeklyOvertime=Enable weekly overtime alerts
+ClockworkWeeklyOvertimeHours=Weekly overtime threshold (hours)
+ClockworkWeeklyOvertimeHoursHelp=Alert when user's weekly hours exceed this value (e.g., 48 for EU limit)
+ClockworkWebhookOvertime=Weekly overtime webhook URL (optional override)
+
+# Slack/Teams Webhooks
+ClockworkSlackTeamsWebhooks=Slack & Microsoft Teams Webhooks
+ClockworkSlackWebhookURL=Slack webhook URL
+ClockworkSlackWebhookHelp=Slack Incoming Webhook URL for notifications
+ClockworkTeamsWebhookURL=Microsoft Teams webhook URL
+ClockworkTeamsWebhookHelp=Teams Incoming Webhook URL for notifications
+
+# Fatigue Management
+ClockworkFatigueManagement=Fatigue Management
+ClockworkEnableFatigueAlerts=Enable fatigue management alerts
+ClockworkMinRestHours=Minimum rest between shifts (hours)
+ClockworkMinRestHoursHelp=Minimum required rest time between shifts. Alert if user has less rest than this.
+
+# Auto-Close Shifts
+ClockworkAutoCloseShifts=Auto-Close Shifts
+ClockworkEnableAutoClose=Enable automatic shift closure
+ClockworkAutoCloseHours=Auto-close after (hours)
+ClockworkAutoCloseHoursHelp=Automatically close shifts that exceed this duration. Set to 0 to disable.
+
+# Concurrent Sessions
+ClockworkConcurrentSessions=Concurrent Session Detection
+ClockworkEnableConcurrentDetection=Enable concurrent session detection
+ClockworkEnableConcurrentDetectionHelp=Alert when a user has multiple active shifts simultaneously.
+
+# Shift Pattern Violations
+ClockworkShiftPatternViolations=Shift Pattern Violations
+ClockworkEnableShiftPatternDetection=Enable shift pattern violation detection
+ClockworkShiftPatternGraceMinutes=Grace period (minutes)
+ClockworkShiftPatternGraceHelp=Allowed deviation from expected shift pattern in minutes.
+
+# Monthly Compliance
+ClockworkMonthlyCompliance=Monthly Compliance
+ClockworkCompliant=Compliant
+ClockworkNearTarget=Near Target
+ClockworkBelowTarget=Below Target
+ClockworkTotalDeductions=Total Deductions
+ClockworkRecalculate=Recalculate
+ClockworkSendEmails=Send Email Notifications
+ClockworkComplianceCalculated=Compliance calculated for %s users
+ClockworkComplianceApproved=Compliance record approved
+ClockworkEmailsSent=%s emails sent
+ClockworkExpectedHours=Expected Hours
+ClockworkActualHours=Actual Hours
+ClockworkCompliancePct=Compliance %
+ClockworkMissedDays=Missed Days
+ClockworkDeduction=Deduction
+ClockworkApproved=Approved
+ClockworkPayslip=Payslip
+ClockworkGeneratePayslip=Generate Payslip
+ClockworkGenerateApprovedPayslips=Generate Approved Payslips
+ClockworkPayslipGenerated=Payslip generated: salary #%s
+ClockworkPayslipAlreadyGenerated=Payslip already exists: salary #%s
+ClockworkPayslipsBulkGenerated=%s payslips generated
+ClockworkNotGenerated=Not generated
+ClockworkNetSalary=Net Salary
+ClockworkExclusions=Exclusions
+ClockworkExcludedFromCompliance=Exclude from compliance
+ClockworkExcludedFromDeductions=Exclude from deductions
+ClockworkExcludedNotifications=Excluded notifications
+ClockworkExclusionReason=Reason
+ClockworkExclusionValidUntil=Valid until
+ClockworkExclusionSaved=Exclusion updated
+ClockworkExclusionDeleted=Exclusion removed
+ClockworkMyPayslips=My Payslips
+ClockworkSendPayslipEmail=Send Payslip Email
+ClockworkSendPayslipEmails=Send Payslip Emails
+ClockworkPayslipEmailSent=Payslip email sent
+ClockworkPayslipEmailFailed=Payslip email failed
+ClockworkPayslipEmailNoPayslip=No generated payslip is available for this row
+ClockworkPayslipEmailsSent=%s payslip emails sent
+ClockworkPayslipTemplate=Payslip Template
+ClockworkInAppNotifications=In-App Notifications
+ClockworkMarkAllRead=Mark all as read
+ClockworkNoNotifications=No notifications yet
+ClockworkIdleAlertTitle=Idle shift detected
+ClockworkIdleAlertMessage=No activity detected for %s. Please confirm your status or clock out.
+ClockworkNotificationTargets=Clockwork Notification Targets
+ClockworkNotificationTargetsHelp=Per-user routing details used to target Clockwork webhook alerts at the affected user instead of only posting generic notices.
+ClockworkNotificationTargetsSaved=Clockwork notification targets updated
+ClockworkDiscordUserId=Discord User ID
+ClockworkDiscordUserIdHelp=Preferred for Discord mentions. Use the numeric Discord user ID, for example 757960199817396274.
+ClockworkDiscordUsername=Discord Username / Mention Fallback
+ClockworkDiscordUsernameHelp=Optional fallback if no Discord user ID is stored. You can use @username, a raw numeric ID, or <@123...>.
+ClockworkSlackUserId=Slack User ID
+ClockworkSlackUserIdHelp=Slack member ID used for targeted Slack mentions, for example U0123456789.
+ClockworkSaveAndSendTestDiscord=Save and send test Discord notification
+ClockworkTestDiscordSent=Test Discord notification sent
+ClockworkTestDiscordFailed=Test Discord notification failed: %s
+ClockworkTestDiscordNoWebhook=No Discord webhook is configured for Clockwork notifications

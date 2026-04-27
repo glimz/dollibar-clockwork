@@ -104,10 +104,11 @@ class ClockworkShift extends CommonObject
 		$this->db->begin();
 
 		$sql = 'INSERT INTO '.MAIN_DB_PREFIX.$this->table_element.'(';
-		$sql .= 'entity, fk_user, clockin, status, worked_seconds, break_seconds, net_seconds, note, ip, user_agent, datec';
+		$sql .= 'entity, fk_user, clockin, last_activity_at, status, worked_seconds, break_seconds, net_seconds, note, ip, user_agent, datec';
 		$sql .= ') VALUES (';
 		$sql .= ((int) $conf->entity).',';
 		$sql .= ((int) $user->id).',';
+		$sql .= "'".$this->db->idate($now)."',";
 		$sql .= "'".$this->db->idate($now)."',";
 		$sql .= '0,0,0,0,';
 		$sql .= "'".$this->db->escape($note)."',";

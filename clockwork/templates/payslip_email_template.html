@@ -1,0 +1,12 @@
+<h2>📄 Payslip Available</h2>
+<p>Hello {{employee_name}},</p>
+<p>Your payslip for <strong>{{month_label}}</strong> has been generated.</p>
+<div class="alert alert-success">
+	<strong>Summary</strong><br>
+	Gross: {{gross}}<br>
+	Deductions: {{deduction}}<br>
+	Net: {{net}}
+</div>
+<p><a class="button" href="{{pdf_url}}">Download Payslip PDF</a></p>
+<p><a class="button" href="{{my_payslips_url}}">Open My Payslips</a></p>
+<p class="opacitymedium">Salary card link: <a href="{{salary_url}}">{{salary_url}}</a></p>
