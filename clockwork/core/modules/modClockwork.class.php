@@ -43,7 +43,7 @@ class modClockwork extends DolibarrModules
 		$this->langfiles = array('clockwork@clockwork');
 
 		$this->module_parts = array(
-			'hooks' => array('main'),
+			'hooks' => array('main', 'usercard', 'globalcard'),
 			'triggers' => 1,
 		);
 

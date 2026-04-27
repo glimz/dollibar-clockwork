@@ -258,6 +258,180 @@ function clockworkSendTeamsWebhook($type, $payload)
 }
 
 /**
+ * Return a user_param value.
+ *
+ * @param DoliDB $db
+ * @param int    $userId
+ * @param string $param
+ * @param string $default
+ * @return string
+ */
+function clockworkGetUserParamValue($db, $userId, $param, $default = '')
+{
+	$sql = 'SELECT value FROM '.MAIN_DB_PREFIX.'user_param';
+	$sql .= ' WHERE fk_user = '.((int) $userId);
+	$sql .= " AND param = '".$db->escape($param)."'";
+	$sql .= ' LIMIT 1';
+
+	$resql = $db->query($sql);
+	if ($resql && ($obj = $db->fetch_object($resql))) {
+		return trim((string) $obj->value);
+	}
+
+	return (string) $default;
+}
+
+/**
+ * Normalize a Discord mention token.
+ *
+ * @param string $raw
+ * @return string
+ */
+function clockworkNormalizeDiscordMention($raw)
+{
+	$raw = trim((string) $raw);
+	if ($raw === '') return '';
+	if (preg_match('/^<@!?(\d+)>$/', $raw, $m)) return '<@'.$m[1].'>';
+	if (preg_match('/^@?(\d+)$/', $raw, $m)) return '<@'.$m[1].'>';
+	if ($raw[0] === '@') return $raw;
+	return '@'.$raw;
+}
+
+/**
+ * Normalize a Slack mention token.
+ *
+ * @param string $raw
+ * @return string
+ */
+function clockworkNormalizeSlackMention($raw)
+{
+	$raw = trim((string) $raw);
+	if ($raw === '') return '';
+	if (preg_match('/^<@([A-Z0-9]+)>$/i', $raw, $m)) return '<@'.$m[1].'>';
+	if (preg_match('/^@?([A-Z0-9]+)$/i', $raw, $m)) return '<@'.$m[1].'>';
+	return $raw;
+}
+
+/**
+ * Format a fallback target label.
+ *
+ * @param string $login
+ * @param string $label
+ * @return string
+ */
+function clockworkFormatTargetLabel($login, $label = '')
+{
+	$label = trim((string) $label);
+	if ($label !== '') return $label;
+
+	$login = trim((string) $login);
+	if ($login !== '') return '@'.$login;
+
+	return 'this user';
+}
+
+/**
+ * Build target text for a platform.
+ *
+ * @param DoliDB $db
+ * @param string $platform
+ * @param array<string,mixed> $targets
+ * @return string
+ */
+function clockworkBuildTargetText($db, $platform, array $targets)
+{
+	$userIds = array();
+	if (!empty($targets['user_ids']) && is_array($targets['user_ids'])) {
+		$userIds = $targets['user_ids'];
+	} elseif (!empty($targets['user_id'])) {
+		$userIds = array($targets['user_id']);
+	}
+
+	$mentions = array();
+	foreach ($userIds as $userId) {
+		$userId = (int) $userId;
+		if ($userId <= 0) continue;
+
+		if ($platform === CLOCKWORK_PLATFORM_DISCORD) {
+			$discordUserId = clockworkGetUserParamValue($db, $userId, 'CLOCKWORK_DISCORD_USER_ID', '');
+			if ($discordUserId === '') {
+				$discordUserId = clockworkGetUserParamValue($db, $userId, 'CLOCKWORK_DISCORD_USERNAME', '');
+			}
+			$mention = clockworkNormalizeDiscordMention($discordUserId);
+			if ($mention !== '') $mentions[] = $mention;
+			continue;
+		}
+
+		if ($platform === CLOCKWORK_PLATFORM_SLACK) {
+			$slackId = clockworkGetUserParamValue($db, $userId, 'CLOCKWORK_SLACK_ID', '');
+			$mention = clockworkNormalizeSlackMention($slackId);
+			if ($mention !== '') $mentions[] = $mention;
+		}
+	}
+
+	$mentions = array_values(array_unique(array_filter($mentions)));
+	if (!empty($mentions)) {
+		return implode(' ', $mentions);
+	}
+
+	$fallbackLabels = array();
+	if (!empty($targets['label'])) {
+		$fallbackLabels[] = clockworkFormatTargetLabel((string) ($targets['login'] ?? ''), (string) $targets['label']);
+	}
+	if (!empty($targets['labels']) && is_array($targets['labels'])) {
+		foreach ($targets['labels'] as $label) {
+			$label = trim((string) $label);
+			if ($label !== '') $fallbackLabels[] = $label;
+		}
+	}
+	if (!empty($targets['logins']) && is_array($targets['logins'])) {
+		foreach ($targets['logins'] as $login) {
+			$login = trim((string) $login);
+			if ($login !== '') $fallbackLabels[] = '@'.$login;
+		}
+	}
+	if (!empty($targets['login']) && empty($fallbackLabels)) {
+		$fallbackLabels[] = clockworkFormatTargetLabel((string) $targets['login']);
+	}
+
+	$fallbackLabels = array_values(array_unique(array_filter($fallbackLabels)));
+	if (empty($fallbackLabels)) {
+		return '';
+	}
+
+	if ($platform === CLOCKWORK_PLATFORM_TEAMS) {
+		return 'Target: '.implode(', ', $fallbackLabels);
+	}
+
+	return implode(', ', $fallbackLabels);
+}
+
+/**
+ * Apply per-user targeting text to a webhook payload.
+ *
+ * @param DoliDB               $db
+ * @param array<string,mixed>  $payload
+ * @param array<string,mixed>  $targets
+ * @return array<string,mixed>
+ */
+function clockworkApplyTargetsToPayload($db, array $payload, array $targets)
+{
+	$baseContent = (string) ($payload['content'] ?? '');
+	$discordTarget = clockworkBuildTargetText($db, CLOCKWORK_PLATFORM_DISCORD, $targets);
+	if ($discordTarget !== '') {
+		$payload['content'] = trim($discordTarget."\n".$baseContent);
+	}
+	$payload['_clockwork_original_content'] = $baseContent;
+
+	$payload['_clockwork_targets'] = array(
+		CLOCKWORK_PLATFORM_SLACK => clockworkBuildTargetText($db, CLOCKWORK_PLATFORM_SLACK, $targets),
+		CLOCKWORK_PLATFORM_TEAMS => clockworkBuildTargetText($db, CLOCKWORK_PLATFORM_TEAMS, $targets),
+	);
+
+	return $payload;
+}
+
+/**
  * Convert Discord payload to Slack format.
  *
  * @param array<string,mixed> $discordPayload
@@ -266,6 +440,28 @@ function clockworkSendTeamsWebhook($type, $payload)
 function clockworkConvertToSlackPayload($discordPayload)
 {
 	$blocks = array();
+	$targetText = trim((string) ($discordPayload['_clockwork_targets'][CLOCKWORK_PLATFORM_SLACK] ?? ''));
+	$baseContent = (string) ($discordPayload['_clockwork_original_content'] ?? ($discordPayload['content'] ?? ''));
+
+	if ($targetText !== '') {
+		$blocks[] = array(
+			'type' => 'section',
+			'text' => array(
+				'type' => 'mrkdwn',
+				'text' => $targetText,
+			),
+		);
+	}
+
+	if ($baseContent !== '') {
+		$blocks[] = array(
+			'type' => 'section',
+			'text' => array(
+				'type' => 'mrkdwn',
+				'text' => $baseContent,
+			),
+		);
+	}
 
 	// Header
 	if (!empty($discordPayload['embeds'][0]['title'])) {
@@ -329,8 +525,23 @@ function clockworkConvertToSlackPayload($discordPayload)
 function clockworkConvertToTeamsPayload($discordPayload)
 {
 	$embed = $discordPayload['embeds'][0] ?? array();
-
+	$targetText = trim((string) ($discordPayload['_clockwork_targets'][CLOCKWORK_PLATFORM_TEAMS] ?? ''));
+	$baseContent = (string) ($discordPayload['_clockwork_original_content'] ?? ($discordPayload['content'] ?? ''));
 	$sections = array();
+
+	if ($targetText !== '') {
+		$sections[] = array(
+			'facts' => array(),
+			'text' => $targetText,
+		);
+	}
+
+	if ($baseContent !== '') {
+		$sections[] = array(
+			'facts' => array(),
+			'text' => str_replace("\n", "<br>", $baseContent),
+		);
+	}
 
 	// Description
 	if (!empty($embed['description'])) {
@@ -399,6 +610,8 @@ function clockworkNotify($type, $content)
  */
 function clockworkNotifyEmbed($type, $embedData)
 {
+	global $db;
+
 	if (!clockworkIsNotificationEnabled($type)) {
 		return array('ok' => true, 'results' => array());
 	}
@@ -419,6 +632,16 @@ function clockworkNotifyEmbed($type, $embedData)
 	}
 
 	$payload = array('embeds' => array($embed));
+	if ($db && (!empty($embedData['target_user_id']) || !empty($embedData['target_user_ids']) || !empty($embedData['target_label']) || !empty($embedData['target_labels']) || !empty($embedData['target_login']) || !empty($embedData['target_logins']))) {
+		$payload = clockworkApplyTargetsToPayload($db, $payload, array(
+			'user_id' => $embedData['target_user_id'] ?? 0,
+			'user_ids' => $embedData['target_user_ids'] ?? array(),
+			'label' => $embedData['target_label'] ?? '',
+			'labels' => $embedData['target_labels'] ?? array(),
+			'login' => $embedData['target_login'] ?? '',
+			'logins' => $embedData['target_logins'] ?? array(),
+		));
+	}
 	return clockworkSendWebhookAll($type, $payload);
 }
 
@@ -448,7 +671,7 @@ function clockworkEmbedField($name, $value, $inline = true)
  * @param string $ip IP address
  * @return array{ok:bool,results:array}
  */
-function clockworkNotifyClockin($login, $shiftId, $clockinTs, $ip)
+function clockworkNotifyClockin($login, $shiftId, $clockinTs, $ip, $userId = 0)
 {
 	$fields = array(
 		clockworkEmbedField('User', $login, true),
@@ -462,6 +685,9 @@ function clockworkNotifyClockin($login, $shiftId, $clockinTs, $ip)
 		'color' => 3066993, // Green
 		'fields' => $fields,
 		'footer' => 'Clockwork',
+		'target_user_id' => (int) $userId,
+		'target_label' => $login,
+		'target_login' => $login,
 	));
 }
 
@@ -474,7 +700,7 @@ function clockworkNotifyClockin($login, $shiftId, $clockinTs, $ip)
  * @param int $netSeconds Net worked seconds
  * @return array{ok:bool,results:array}
  */
-function clockworkNotifyClockout($login, $shiftId, $clockoutTs, $netSeconds)
+function clockworkNotifyClockout($login, $shiftId, $clockoutTs, $netSeconds, $userId = 0)
 {
 	$fields = array(
 		clockworkEmbedField('User', $login, true),
@@ -488,6 +714,9 @@ function clockworkNotifyClockout($login, $shiftId, $clockoutTs, $netSeconds)
 		'color' => 15158332, // Red
 		'fields' => $fields,
 		'footer' => 'Clockwork',
+		'target_user_id' => (int) $userId,
+		'target_label' => $login,
+		'target_login' => $login,
 	));
 }
 
@@ -499,7 +728,7 @@ function clockworkNotifyClockout($login, $shiftId, $clockoutTs, $netSeconds)
  * @param int $breakStartTs Break start timestamp
  * @return array{ok:bool,results:array}
  */
-function clockworkNotifyBreakStart($login, $shiftId, $breakStartTs)
+function clockworkNotifyBreakStart($login, $shiftId, $breakStartTs, $userId = 0)
 {
 	$fields = array(
 		clockworkEmbedField('User', $login, true),
@@ -512,6 +741,9 @@ function clockworkNotifyBreakStart($login, $shiftId, $breakStartTs)
 		'color' => 16776960, // Yellow
 		'fields' => $fields,
 		'footer' => 'Clockwork',
+		'target_user_id' => (int) $userId,
+		'target_label' => $login,
+		'target_login' => $login,
 	));
 }
 
@@ -524,7 +756,7 @@ function clockworkNotifyBreakStart($login, $shiftId, $breakStartTs)
  * @param int $breakSeconds Break duration in seconds
  * @return array{ok:bool,results:array}
  */
-function clockworkNotifyBreakEnd($login, $shiftId, $breakEndTs, $breakSeconds)
+function clockworkNotifyBreakEnd($login, $shiftId, $breakEndTs, $breakSeconds, $userId = 0)
 {
 	$fields = array(
 		clockworkEmbedField('User', $login, true),
@@ -538,6 +770,9 @@ function clockworkNotifyBreakEnd($login, $shiftId, $breakEndTs, $breakSeconds)
 		'color' => 3447003, // Blue
 		'fields' => $fields,
 		'footer' => 'Clockwork',
+		'target_user_id' => (int) $userId,
+		'target_label' => $login,
+		'target_login' => $login,
 	));
 }
 
@@ -550,7 +785,7 @@ function clockworkNotifyBreakEnd($login, $shiftId, $breakEndTs, $breakSeconds)
  * @param string $ip IP address
  * @return array{ok:bool,results:array}
  */
-function clockworkNotifyOverwork($login, $shiftId, $continuousSeconds, $ip)
+function clockworkNotifyOverwork($login, $userId, $shiftId, $continuousSeconds, $ip)
 {
 	$fields = array(
 		clockworkEmbedField('User', $login, true),
@@ -565,6 +800,9 @@ function clockworkNotifyOverwork($login, $shiftId, $continuousSeconds, $ip)
 		'color' => 16744448, // Orange
 		'fields' => $fields,
 		'footer' => 'Clockwork • Please take a break',
+		'target_user_id' => (int) $userId,
+		'target_label' => $login,
+		'target_login' => $login,
 	));
 }
 
@@ -576,7 +814,7 @@ function clockworkNotifyOverwork($login, $shiftId, $continuousSeconds, $ip)
  * @param int $clockinTs Clock-in timestamp
  * @return array{ok:bool,results:array}
  */
-function clockworkNotifyLogoutReminder($login, $shiftId, $clockinTs)
+function clockworkNotifyLogoutReminder($login, $userId, $shiftId, $clockinTs)
 {
 	$workedSeconds = max(0, dol_now() - $clockinTs);
 
@@ -593,6 +831,9 @@ function clockworkNotifyLogoutReminder($login, $shiftId, $clockinTs)
 		'color' => 16750848, // Orange-yellow
 		'fields' => $fields,
 		'footer' => 'Clockwork',
+		'target_user_id' => (int) $userId,
+		'target_label' => $login,
+		'target_login' => $login,
 	));
 }
 
@@ -607,7 +848,7 @@ function clockworkNotifyLogoutReminder($login, $shiftId, $clockinTs)
  * @param string $newLocation New location string
  * @return array{ok:bool,results:array}
  */
-function clockworkNotifyNetworkChange($login, $shiftId, $oldIP, $newIP, $oldLocation, $newLocation)
+function clockworkNotifyNetworkChange($login, $shiftId, $oldIP, $newIP, $oldLocation, $newLocation, $userId = 0)
 {
 	$fields = array(
 		clockworkEmbedField('User', $login, true),
@@ -622,6 +863,9 @@ function clockworkNotifyNetworkChange($login, $shiftId, $oldIP, $newIP, $oldLoca
 		'color' => 15158332, // Red
 		'fields' => $fields,
 		'footer' => 'Clockwork • Security Alert',
+		'target_user_id' => (int) $userId,
+		'target_label' => $login,
+		'target_login' => $login,
 	));
 }
 
@@ -653,6 +897,9 @@ function clockworkNotifyFatigue($login, $userId, $restSeconds, $minRestSeconds, 
 		'color' => 16744448, // Orange
 		'fields' => $fields,
 		'footer' => 'Clockwork • Fatigue Management',
+		'target_user_id' => (int) $userId,
+		'target_label' => $login,
+		'target_login' => $login,
 	));
 }
 
@@ -665,7 +912,7 @@ function clockworkNotifyFatigue($login, $userId, $restSeconds, $minRestSeconds, 
  * @param int $maxSeconds Maximum allowed seconds
  * @return array{ok:bool,results:array}
  */
-function clockworkNotifyAutoClose($login, $shiftId, $workedSeconds, $maxSeconds)
+function clockworkNotifyAutoClose($login, $userId, $shiftId, $workedSeconds, $maxSeconds)
 {
 	$fields = array(
 		clockworkEmbedField('User', $login, true),
@@ -680,6 +927,9 @@ function clockworkNotifyAutoClose($login, $shiftId, $workedSeconds, $maxSeconds)
 		'color' => 16711680, // Red
 		'fields' => $fields,
 		'footer' => 'Clockwork • Auto Closure',
+		'target_user_id' => (int) $userId,
+		'target_label' => $login,
+		'target_login' => $login,
 	));
 }
 
@@ -705,6 +955,9 @@ function clockworkNotifyConcurrent($login, $userId, $activeShifts)
 		'color' => 16744448, // Orange
 		'fields' => $fields,
 		'footer' => 'Clockwork • Session Detection',
+		'target_user_id' => (int) $userId,
+		'target_label' => $login,
+		'target_login' => $login,
 	));
 }
 
@@ -731,6 +984,9 @@ function clockworkNotifyShiftPattern($login, $userId, $expectedPattern, $actualC
 		'color' => 16776960, // Yellow
 		'fields' => $fields,
 		'footer' => 'Clockwork • Shift Pattern',
+		'target_user_id' => (int) $userId,
+		'target_label' => $login,
+		'target_login' => $login,
 	));
 }
 
@@ -743,7 +999,7 @@ function clockworkNotifyShiftPattern($login, $userId, $expectedPattern, $actualC
  * @param string $lastActivityText
  * @return array{ok:bool,results:array}
  */
-function clockworkNotifyIdle($login, $shiftId, $idleSeconds, $lastActivityText)
+function clockworkNotifyIdle($login, $userId, $shiftId, $idleSeconds, $lastActivityText)
 {
 	$fields = array(
 		clockworkEmbedField('User', $login, true),
@@ -758,5 +1014,8 @@ function clockworkNotifyIdle($login, $shiftId, $idleSeconds, $lastActivityText)
 		'color' => 16098851,
 		'fields' => $fields,
 		'footer' => 'Clockwork • Idle Detection',
+		'target_user_id' => (int) $userId,
+		'target_label' => $login,
+		'target_login' => $login,
 	));
 }

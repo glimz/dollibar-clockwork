@@ -165,6 +165,8 @@ class ClockworkCron
 		}
 
 		$missing = array();
+		$missingIds = array();
+		$missingLogins = array();
 		foreach ($users as $u) {
 			if (!empty($clockedIn[$u['id']])) continue;
 
@@ -180,6 +182,8 @@ class ClockworkCron
 			$label = $u['login'];
 			if ($name !== '') $label .= ' ('.$name.')';
 			$missing[] = $label;
+			$missingIds[] = (int) $u['id'];
+			$missingLogins[] = (string) $u['login'];
 		}
 
 		if (!empty($missing)) {
@@ -198,6 +202,9 @@ class ClockworkCron
 				'color' => 16744448, // Orange
 				'fields' => $fields,
 				'footer' => 'Clockwork • Missed Clock-In',
+				'target_user_ids' => $missingIds,
+				'target_labels' => $missing,
+				'target_logins' => $missingLogins,
 			));
 			if (empty($res['ok'])) {
 				dol_syslog('Clockwork missed clock-in webhook failed: '.json_encode($res), LOG_ERR);
@@ -281,6 +288,9 @@ class ClockworkCron
 		}
 
 		$lines = array();
+		$summaryUserIds = array();
+		$summaryLabels = array();
+		$summaryLogins = array();
 		while ($obj = $this->db->fetch_object($resql)) {
 			$login = (string) $obj->login;
 			if (clockworkShouldSkipNotificationUser($this->db, (int) $obj->fk_user, $login, CLOCKWORK_NOTIFY_TYPE_WEEKLY_SUMMARY)) continue;
@@ -291,17 +301,28 @@ class ClockworkCron
 
 			$lines[] = $label.': net '.clockworkFormatDuration((int) $obj->netsec)
 				.' (worked '.clockworkFormatDuration((int) $obj->worked).', breaks '.clockworkFormatDuration((int) $obj->breaksec).', shifts '.((int) $obj->nbshifts).')';
+			$summaryUserIds[] = (int) $obj->fk_user;
+			$summaryLabels[] = $label;
+			$summaryLogins[] = $login;
 		}
 
-		$title = '[Clockwork] Weekly summary '.$isoWeek.' ('.$weekStartLocal->format('Y-m-d').' → '.$weekEndLocal->modify('-1 second')->format('Y-m-d').')';
-		$msg = $title."\n";
-		if (!empty($lines)) {
-			$msg .= "- ".implode("\n- ", $lines);
-		} else {
-			$msg .= '(no closed shifts)';
-		}
+		$summaryRange = $weekStartLocal->format('Y-m-d').' → '.$weekEndLocal->modify('-1 second')->format('Y-m-d');
+		$fields = array(
+			clockworkEmbedField('Week', $isoWeek, true),
+			clockworkEmbedField('Range', $summaryRange, true),
+			clockworkEmbedField('Summary', !empty($lines) ? implode("\n", $lines) : '(no closed shifts)', false),
+		);
 
-		$res = clockworkSendDiscordWebhook(CLOCKWORK_NOTIFY_TYPE_WEEKLY_SUMMARY, array('content' => $msg));
+		$res = clockworkNotifyEmbed(CLOCKWORK_NOTIFY_TYPE_WEEKLY_SUMMARY, array(
+			'title' => '📊 Weekly Summary '.$isoWeek,
+			'description' => 'Net hours, worked time, breaks, and shift counts for the previous ISO week.',
+			'color' => 3447003,
+			'fields' => $fields,
+			'footer' => 'Clockwork • Weekly Summary',
+			'target_user_ids' => $summaryUserIds,
+			'target_labels' => $summaryLabels,
+			'target_logins' => $summaryLogins,
+		));
 		if (empty($res['ok'])) {
 			dol_syslog('Clockwork weekly summary webhook failed: '.json_encode($res), LOG_ERR);
 			return 0;
@@ -406,7 +427,7 @@ class ClockworkCron
 
 				// Send rich embed notification
 				require_once DOL_DOCUMENT_ROOT . '/custom/clockwork/lib/clockwork_webhook.lib.php';
-				clockworkNotifyOverwork($login, $shiftId, $continuousSeconds, $obj->ip);
+				clockworkNotifyOverwork($login, (int) $obj->fk_user, $shiftId, $continuousSeconds, $obj->ip);
 
 				// Mark alert sent
 				dolibarr_set_const($this->db, $alertKey, dol_print_date($now, 'dayhourlog'), 'chaine', 0, '', $conf->entity);
@@ -492,7 +513,7 @@ class ClockworkCron
 
 			// Send rich embed notification
 			require_once DOL_DOCUMENT_ROOT . '/custom/clockwork/lib/clockwork_webhook.lib.php';
-			clockworkNotifyLogoutReminder($login, $shiftId, $clockinTs);
+			clockworkNotifyLogoutReminder($login, (int) $obj->fk_user, $shiftId, $clockinTs);
 
 			$reminders[] = $label;
 		}
@@ -582,6 +603,9 @@ class ClockworkCron
 					'color' => 16711680, // Red
 					'fields' => $fields,
 					'footer' => 'Clockwork • Maximum Shift Alert',
+					'target_user_id' => (int) $obj->fk_user,
+					'target_label' => $label,
+					'target_login' => $login,
 				));
 
 				// Mark alert sent
@@ -701,6 +725,9 @@ class ClockworkCron
 					'color' => 16776960, // Yellow
 					'fields' => $fields,
 					'footer' => 'Clockwork • Break Reminder',
+					'target_user_id' => (int) $obj->fk_user,
+					'target_label' => $label,
+					'target_login' => $login,
 				));
 
 				// Mark reminder sent
@@ -879,7 +906,7 @@ class ClockworkCron
 				$workedHours = round($netSeconds / 3600, 1);
 
 				// Send notification
-				clockworkNotifyAutoClose($label, $shiftId, $netSeconds, $maxShiftSeconds);
+				clockworkNotifyAutoClose($label, (int) $obj->fk_user, $shiftId, $netSeconds, $maxShiftSeconds);
 
 				// Mark as closed
 				dolibarr_set_const($this->db, $alertKey, dol_print_date($now, 'dayhourlog'), 'chaine', 0, '', $conf->entity);
@@ -1144,6 +1171,7 @@ class ClockworkCron
 
 				if ($totalNet >= $weeklyOvertimeSeconds) {
 					$overTimeUsers[] = array(
+						'id' => (int) $u['id'],
 						'login' => $u['login'],
 						'name' => trim($u['firstname'] . ' ' . $u['lastname']),
 						'totalNet' => $totalNet,
@@ -1173,6 +1201,9 @@ class ClockworkCron
 				'color' => 16744448, // Orange
 				'fields' => $fields,
 				'footer' => 'Clockwork • Weekly Overtime',
+				'target_user_id' => (int) $u['id'],
+				'target_label' => $label,
+				'target_login' => $u['login'],
 			));
 		}
 
@@ -1259,7 +1290,7 @@ class ClockworkCron
 			));
 
 			$lastActivityText = dol_print_date($lastActivityTs, 'dayhourlog');
-			clockworkNotifyIdle($label, $shiftId, $idleSeconds, $lastActivityText);
+			clockworkNotifyIdle($label, $userId, $shiftId, $idleSeconds, $lastActivityText);
 
 			$sqlu = 'UPDATE '.MAIN_DB_PREFIX.'clockwork_shift';
 			$sqlu .= ' SET idle_notified_at = \''.$this->db->idate($now).'\'';
