@@ -341,6 +341,10 @@ class ClockworkCron
 	{
 		global $conf;
 
+		if ($this->shouldSuppressOpenShiftAlertsBecauseAutoCloseEnabled()) {
+			return 0;
+		}
+
 		if (!clockworkIsNotificationEnabled(CLOCKWORK_NOTIFY_TYPE_OVERWORK)) {
 			return 0;
 		}
@@ -624,6 +628,10 @@ class ClockworkCron
 	public function notifyEscalatingBreakReminders()
 	{
 		global $conf;
+
+		if ($this->shouldSuppressOpenShiftAlertsBecauseAutoCloseEnabled()) {
+			return 0;
+		}
 
 		if (!getDolGlobalInt('CLOCKWORK_ENABLE_ESCALATING_BREAK_REMINDERS', 1)) {
 			return 0;
@@ -1219,6 +1227,10 @@ class ClockworkCron
 	{
 		global $conf;
 
+		if ($this->shouldSuppressOpenShiftAlertsBecauseAutoCloseEnabled()) {
+			return 0;
+		}
+
 		if (!getDolGlobalInt('CLOCKWORK_NOTIFY_IDLE', 1)) {
 			return 0;
 		}
@@ -1300,5 +1312,16 @@ class ClockworkCron
 		}
 
 		return 0;
+	}
+
+	/**
+	 * When auto-close is enabled, it becomes the controlling behavior for open shifts.
+	 * Suppress idle, overwork, and break-reminder alert flows to avoid conflicting notifications.
+	 *
+	 * @return bool
+	 */
+	private function shouldSuppressOpenShiftAlertsBecauseAutoCloseEnabled()
+	{
+		return (bool) getDolGlobalInt('CLOCKWORK_AUTO_CLOSE_SHIFTS', 1);
 	}
 }
